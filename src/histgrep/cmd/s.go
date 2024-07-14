@@ -29,6 +29,7 @@ func init() {
 	sCmd.Flags().StringP("line-format", "l", "-", "Format of the line e.g. \"{foo}:{bar}:{string}\"")
 	sCmd.Flags().StringP("output-format", "f", "-", "Format for the output e.g. \"{foo}\\t{bar}\\t{string}\"")
 	sCmd.Flags().StringP("output", "o", "stdout", "Output file (leave blank for stdout)")
+	sCmd.Flags().StringP("name", "n", "-", "Name of saved format (add with histgrep add-format -n [name] -i [input] -o [output])")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
 
@@ -118,14 +119,45 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Input_file, _ = cmd.Flags().GetString("input")
 	data.Output_file, _ = cmd.Flags().GetString("output")
 
+	name, _ := cmd.Flags().GetString("name")
 
-	data.LineFormat, _ = cmd.Flags().GetString("line-format")
-	data.OutputFormat, _ = cmd.Flags().GetString("output-format")
+	if name == "-" {
+		data.LineFormat, _ = cmd.Flags().GetString("line-format")
+		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
+    } else {
+		file, err := utils.GetDataPath("histgrep/formats.json")
+		if err != nil {
+			utils.ErrorExit(fmt.Sprintf("Searched for %v/histgrep and %v/.histgrep\nPlease create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/\n)", utils.XDG_CONFIG_HOME, utils.HOME_PATH))
+		}
+		configMap := hsdata.ConfigMap{}
+		utils.FetchFormatting(file, name, &configMap)
+		format_c, _:= configMap[name]
+		if format_c.Input == "" {
+			data.LineFormat, _ = cmd.Flags().GetString("line-format")
+			data.OutputFormat, _ = cmd.Flags().GetString("output-format")
+			if data.LineFormat == "-" || data.OutputFormat == "-" {
+				utils.ErrorExit(fmt.Sprintf("Cannot find %v in %v", name, file))
+			}
+			config_data := hsdata.ConfigData{
+				Input: data.LineFormat,
+				Output: data.OutputFormat,
+				Name: name,
+				Path: file,
+			}
+			add(&config_data)
+		} else {
+			data.LineFormat = format_c.Input
+			data.OutputFormat = format_c.Output
+		}
 
+		log.Info(fmt.Sprintf("Fetech formatting: %v for %v", format_c, name))
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	data.Verbosity, _ = cmd.PersistentFlags().GetCount("verbose")
-
+	log.Info(fmt.Sprintf("Args data: %v", data))
 }
-
 
 /*
 TODO: Process the current separator, skip_by, and skip_dir in some way that
@@ -180,5 +212,6 @@ func SkipSeperators(separator string) (string, int, int) {
 	}
 	return current_separator, skip_by, skip_dir
 }
+
 
 const PERIOD byte = 46

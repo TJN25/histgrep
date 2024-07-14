@@ -28,5 +28,31 @@ type FormattingData struct {
     Fseparators *[]string
 }
 
+type FormatArray []FormatPosition
+
+type FormatPosition struct {
+	Name string
+	Separator string
+	Range int
+	Direction int
+}
+
+type ConfigData struct {
+    Input string
+    Output string
+    Name string
+	Action int
+	Verbosity int
+	Path string
+}
+
+type ConfigMap map[string]ConfigSave
+
+type ConfigSave struct {
+    Input string
+    Output string
+}
+
 type WriteFn func(*HsLine)
+
 
