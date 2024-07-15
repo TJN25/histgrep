@@ -91,7 +91,7 @@ func configGetArgs(cmd *cobra.Command, data *hsdata.ConfigData) {
 }
 
 func configCallFunction(data *hsdata.ConfigData) {
-	name, err := utils.GetDataPath("histgrep/formats.json")
+	name, err := utils.GetDataPath("formats.json")
 	if err != nil {
 			fmt.Printf("Searched for %v/histgrep/formats.json and %v/.histgrep/formats.json\n", utils.XDG_CONFIG_HOME, utils.HOME_PATH)
 			fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/formats.json or $HOME/.histgrep/formats.json)")
@@ -126,6 +126,7 @@ func add(data *hsdata.ConfigData) {
 		log.Fatal(fmt.Sprintf("Cannot or find formats.json\n%v", err))
 	}
 	configMap := hsdata.ConfigMap{}
+	utils.FetchFormatting(data.Path, &configMap)
 	json.Unmarshal(jsonFile, &configMap)
 	log.Info(configMap)
 

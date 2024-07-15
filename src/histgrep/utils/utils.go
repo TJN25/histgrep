@@ -12,6 +12,7 @@ import (
 
 var XDG_CONFIG_HOME string = os.Getenv("XDG_CONFIG_HOME")
 var HOME_PATH string = os.Getenv("HOME")
+var HISTGREP_CONFIG_PATH string = os.Getenv("HISTGREP_CONFIG_PATH")
 
 func Btoi(b bool) int {
     if b {
@@ -34,16 +35,29 @@ func CallerName(skip int) string {
 
 func GetDataPath(file string) (string, error) {
     log.Info(fmt.Sprintf("Checking for %v", file))
-	_, err := os.Stat(fmt.Sprintf("%v/%v", XDG_CONFIG_HOME, file)) 
-	if err != nil {
-	_, err := os.Stat(fmt.Sprintf("%v/.%v", HOME_PATH, file)) 
-		if err != nil {
-            return "", err
-		}
-			return fmt.Sprintf("%v/.%v", HOME_PATH, file), nil
+
+	_, err := os.Stat(fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file)) 
+    if err == nil {
+        log.Debug(fmt.Sprintf("File exists: %v/%v", HISTGREP_CONFIG_PATH, file))
+        return fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file), nil
     } else {
-		return fmt.Sprintf("%v/%v", XDG_CONFIG_HOME, file), nil
-	}
+        log.Warn(fmt.Sprintf("File missing: %v/%v", HISTGREP_CONFIG_PATH, file))
+    }
+
+    _, err = os.Stat(fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file)) 
+    if err == nil {
+        return fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file), nil
+    } else {
+        log.Warn(fmt.Sprintf("File missing: %v/histgrep/%v", XDG_CONFIG_HOME, file))
+    }
+
+	_, err = os.Stat(fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file)) 
+    if err == nil {
+        return fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file), nil
+    } else {
+        log.Warn(fmt.Sprintf("File missing: %v/.histgrep/%v", HOME_PATH, file))
+    }
+    return "", err
 }
 
 func ErrorExit(msg string) {
@@ -52,7 +66,7 @@ func ErrorExit(msg string) {
 		os.Exit(1)
 }
 
-func FetchFormatting(file string, name string, configMap *hsdata.ConfigMap) *hsdata.ConfigMap {
+func FetchFormatting(file string, configMap *hsdata.ConfigMap) *hsdata.ConfigMap {
 
 	jsonFile, err := os.ReadFile(file)
 	if err != nil {

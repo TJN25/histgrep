@@ -125,12 +125,12 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		data.LineFormat, _ = cmd.Flags().GetString("line-format")
 		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
     } else {
-		file, err := utils.GetDataPath("histgrep/formats.json")
+		file, err := utils.GetDataPath("formats.json")
 		if err != nil {
 			utils.ErrorExit(fmt.Sprintf("Searched for %v/histgrep and %v/.histgrep\nPlease create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/\n)", utils.XDG_CONFIG_HOME, utils.HOME_PATH))
 		}
 		configMap := hsdata.ConfigMap{}
-		utils.FetchFormatting(file, name, &configMap)
+		utils.FetchFormatting(file, &configMap)
 		format_c, _:= configMap[name]
 		if format_c.Input == "" {
 			data.LineFormat, _ = cmd.Flags().GetString("line-format")

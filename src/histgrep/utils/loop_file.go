@@ -116,15 +116,26 @@ func getInputNames(line string, names *[]string, separators *[]string) MapFormat
 		log.Debug(fmt.Sprintf("Idx: %v, Separator: %v", i, separator_name))
 		curr = strings.SplitN(remainder, separator, 2)
 		log.Debug(fmt.Sprintf("Length %v", len(curr)))
-		log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0], curr[1]))
+		if len(curr) > 1 {
+			log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0], curr[1]))
+		} else {
+			log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0]))
+		}
 		if separator == "" {
 			continue
 		}
 		if i < len(*names) {
 			words[(*names)[i]] = curr[0]
 		}
+		if len(curr) < 2 {
+			idx = len(*names)
+			break
+		}
 		remainder = curr[1]
 		idx = i + 1
+		if remainder == "" {
+			break
+		}
 	}
 	if idx < len(*names) {
 		words[(*names)[idx]] = remainder
