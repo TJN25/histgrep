@@ -8,9 +8,10 @@ import (
 	"github.com/TJN25/histgrep/hsdata"
 )
 
-func LoopFile(hs_dat hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine, format_data hsdata.FormattingData) error {
+func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine, format_data *hsdata.FormattingData) error {
 	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
-	log.Info(fmt.Sprintf("Names: %v, Separators: %v, fn: %v, fs: %v", format_data.Names, format_data.Separators, format_data.Fnames, format_data.Fseparators))
+	log.Info(fmt.Sprintf("Names: %v, Separators: %v, fn: %v, fs: %v\n", format_data.Names, format_data.Separators, format_data.Fnames, format_data.Fseparators))
+    fmt.Println("")
 	scanner, err := GetScanner(hs_dat.Input_file)
 	var do_write bool = true
 	if err != nil {
@@ -36,9 +37,9 @@ func LoopFile(hs_dat hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata
 		if do_write {
 			if (*format_data.Names)[0] != "BLANK" {
 				words_map := getInputNames(current_line.Line, format_data.Names, format_data.Separators)
-				log.Info(words_map)
+				log.Debug(words_map)
 				current_line.Line = FormatLine(&words_map, format_data.Fnames, format_data.Fseparators)
-				log.Info(current_line)
+				log.Debug(current_line)
 			}
 			write_fn(&current_line)
 		}
@@ -119,7 +120,7 @@ func getInputNames(line string, names *[]string, separators *[]string) MapFormat
 		if len(curr) > 1 {
 			log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0], curr[1]))
 		} else {
-			log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0]))
+			log.Debug(fmt.Sprintf("Name: %v, Remainder: N/A", curr[0]))
 		}
 		if separator == "" {
 			continue

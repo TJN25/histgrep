@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
+    "encoding/json"
 	"github.com/TJN25/histgrep/hsdata"
 	"github.com/TJN25/histgrep/utils"
 	log "github.com/sirupsen/logrus"
@@ -36,45 +36,66 @@ func init() {
 
 func sRun(cmd *cobra.Command, args []string) {
 	data := hsdata.HsData{Terms: args}
+    verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
+	utils.SetVerbosity(verbosity)
 	sGetArgs(cmd, &data)
-
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
-
-	switch data.Verbosity {
-		case 0:
-			log.SetLevel(log.FatalLevel)
-		case 1:
-			log.SetLevel(log.ErrorLevel)
-		case 2:
-			log.SetLevel(log.WarnLevel)
-		case 3:
-			log.SetLevel(log.InfoLevel)
-		case 4:
-			log.SetLevel(log.DebugLevel)
-		case 5:
-			log.SetLevel(log.TraceLevel)
-		default:
-			log.SetLevel(log.TraceLevel)
-	}
-	log.Debug(args)
-	log.Info(fmt.Sprintf("%v -> %v\n", data.Input_file, data.Output_file))
-	log.Info(fmt.Sprintf("%v\n", data.Terms))
-	log.Info(fmt.Sprintf("%v\n", data.LineFormat))
-	log.Info(fmt.Sprintf("%v\n", data.OutputFormat))
-
-	log.Info(fmt.Sprintf("%v\n", data.OutputFormat))
-
-	line := hsdata.HsLine{}
-
-
-
-	
-	var names, separators []string
-	var f_names, f_separators []string
-
+    log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Input Format: %v\n    Output Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.LineFormat, data.OutputFormat))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
+    format_data := DoFormatting(&data)
+    RunLoopFile(&data, &format_data)
+    SaveHistory(&data)
+
+}
+
+func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
+
+	data.Input_file, _ = cmd.Flags().GetString("input")
+	data.Output_file, _ = cmd.Flags().GetString("output")
+
+	data.Name, _ = cmd.Flags().GetString("name")
+
+	if data.Name == "-" {
+		data.LineFormat, _ = cmd.Flags().GetString("line-format")
+		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
+        if data.LineFormat == "-" || data.OutputFormat == "-" {
+            UseDefaults(data)
+        }
+    } else {
+		file := utils.GetDataPath("formats.json")
+		configMap := hsdata.ConfigMap{}
+		utils.FetchFormatting(file, &configMap)
+		format_c, _:= configMap[data.Name]
+		if format_c.Input == "" {
+			data.LineFormat, _ = cmd.Flags().GetString("line-format")
+			data.OutputFormat, _ = cmd.Flags().GetString("output-format")
+			if data.LineFormat == "-" || data.OutputFormat == "-" {
+				utils.ErrorExit(fmt.Sprintf("Cannot find %v in %v", data.Name, file))
+			}
+			config_data := hsdata.ConfigData{
+				Input: data.LineFormat,
+				Output: data.OutputFormat,
+				Name: data.Name,
+				Path: file,
+			}
+			add(&config_data)
+		} else {
+			data.LineFormat = format_c.Input
+			data.OutputFormat = format_c.Output
+		}
+
+		log.Info(fmt.Sprintf("Fetech formatting: %v for %v", format_c, data.Name))
+	}
+	log.Info(fmt.Sprintf("Args data: %v", data))
+}
+
+/*
+TODO: Process the current separator, skip_by, and skip_dir in some way that
+TODO: makes sense and allows the later functions to work with the new format.
+TODO: Update the other functions to use this format.
+*/
+
+func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
+    var names, separators, f_names, f_separators []string
 	if data.LineFormat == "-" || data.OutputFormat == "-" {
 		names = append(names, "BLANK")
 		separators = append(names, "BLANK")
@@ -85,85 +106,14 @@ func sRun(cmd *cobra.Command, args []string) {
 		log.Debug(fmt.Sprintf("Formatting output: %v", data))
 		formatInput(data.OutputFormat, &f_names, &f_separators)
 	}
-
 	format_data := hsdata.FormattingData{
 		Names: &names,
 		Separators: &separators,
 		Fnames: &f_names,
 		Fseparators: &f_separators,
 	}
-
-
-	var err error
-
-	if data.Output_file == "stdout" {
-		err = utils.LoopFile(data, utils.PrintLine, line, format_data)
-	} else {
-		f, err := os.Create(data.Output_file)
-		if err != nil {
-			log.Panic(err)
-		}
-	// remember to close the file
-	defer f.Close()
-
-		line.F = f
-		err = utils.LoopFile(data, utils.WriteLine, line, format_data)
-	}
-	if err != nil {
-		log.Panic(err)
-	}
+    return format_data
 }
-
-func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
-
-	data.Input_file, _ = cmd.Flags().GetString("input")
-	data.Output_file, _ = cmd.Flags().GetString("output")
-
-	name, _ := cmd.Flags().GetString("name")
-
-	if name == "-" {
-		data.LineFormat, _ = cmd.Flags().GetString("line-format")
-		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
-    } else {
-		file, err := utils.GetDataPath("formats.json")
-		if err != nil {
-			utils.ErrorExit(fmt.Sprintf("Searched for %v/histgrep and %v/.histgrep\nPlease create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/\n)", utils.XDG_CONFIG_HOME, utils.HOME_PATH))
-		}
-		configMap := hsdata.ConfigMap{}
-		utils.FetchFormatting(file, &configMap)
-		format_c, _:= configMap[name]
-		if format_c.Input == "" {
-			data.LineFormat, _ = cmd.Flags().GetString("line-format")
-			data.OutputFormat, _ = cmd.Flags().GetString("output-format")
-			if data.LineFormat == "-" || data.OutputFormat == "-" {
-				utils.ErrorExit(fmt.Sprintf("Cannot find %v in %v", name, file))
-			}
-			config_data := hsdata.ConfigData{
-				Input: data.LineFormat,
-				Output: data.OutputFormat,
-				Name: name,
-				Path: file,
-			}
-			add(&config_data)
-		} else {
-			data.LineFormat = format_c.Input
-			data.OutputFormat = format_c.Output
-		}
-
-		log.Info(fmt.Sprintf("Fetech formatting: %v for %v", format_c, name))
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	data.Verbosity, _ = cmd.PersistentFlags().GetCount("verbose")
-	log.Info(fmt.Sprintf("Args data: %v", data))
-}
-
-/*
-TODO: Process the current separator, skip_by, and skip_dir in some way that
-TODO: makes sense and allows the later functions to work with the new format.
-TODO: Update the other functions to use this format.
-*/
 
 func formatInput(line string, names *[]string, separators *[]string) {
 	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), line))
@@ -194,6 +144,27 @@ func formatInput(line string, names *[]string, separators *[]string) {
     }
 }
 
+func RunLoopFile(data *hsdata.HsData, format_data *hsdata.FormattingData) {
+	var err error
+	line := hsdata.HsLine{}
+	if data.Output_file == "stdout" {
+		err = utils.LoopFile(data, utils.PrintLine, line, format_data)
+	} else {
+		f, err := os.Create(data.Output_file)
+		if err != nil {
+			log.Panic(err)
+		}
+	// remember to close the file
+	defer f.Close()
+
+		line.F = f
+		err = utils.LoopFile(data, utils.WriteLine, line, format_data)
+	}
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
 func SkipSeperators(separator string) (string, int, int) {
 	write_separator := true
 	current_separator := ""
@@ -213,5 +184,35 @@ func SkipSeperators(separator string) (string, int, int) {
 	return current_separator, skip_by, skip_dir
 }
 
+func UseDefaults(data *hsdata.HsData) {
+	file := utils.GetDataPath("defaults.json")
+	config_file := utils.GetDataPath("formats.json")
+	log.Info(fmt.Sprintf("Using defaults file %v", file))
+	log.Info(fmt.Sprintf("Using config file %v", config_file))
+	configMap := hsdata.ConfigMap{}
+	defaults := hsdata.DefaultsData{}
+	utils.FetchFormatting(config_file, &configMap)
+	utils.FetchDefaults(file, &defaults)
+    defaultsConfig := configMap.Get(defaults.Name)
+    data.Name = defaults.Name
+    data.LineFormat = defaultsConfig.Input
+    data.OutputFormat = defaultsConfig.Output
+}
 
+func SaveHistory(data *hsdata.HsData) {
+    file := utils.GetDataPath("history.json")
+    log.Info(fmt.Sprintf("Saving history to: %v", file))
+	jsonFile, err := os.ReadFile(file)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Cannot find history.json\n%v", err))
+	}
+    history := hsdata.HistoryArray{}
+	json.Unmarshal(jsonFile, &history)
+    history.Add(*data)
+	log.Info(history)
+	b, _ := json.Marshal(history)
+    log.Debug(fmt.Sprintf("%#v", b))
+    os.WriteFile(file, b, os.ModePerm)
+
+}
 const PERIOD byte = 46

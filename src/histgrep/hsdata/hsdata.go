@@ -2,6 +2,8 @@ package hsdata
 
 import (
 	"os"
+    "fmt"
+    "errors"
 )
 
 type HsLine struct {
@@ -15,7 +17,7 @@ type HsData struct {
 	Terms []string
 	LineFormat string
 	OutputFormat string
-	Verbosity int
+    Name string
 }
 
 type MapFormat map[string]string
@@ -48,11 +50,104 @@ type ConfigData struct {
 
 type ConfigMap map[string]ConfigSave
 
+func (cp *ConfigMap) Get(name string) ConfigSave { 
+    return (*cp)[name]
+}
+
+func (cp *ConfigMap) Add(name string, cs ConfigSave) { 
+    (*cp)[name] = cs
+}
+
+func (cp *ConfigMap) Update(name string, cs ConfigSave) { 
+    (*cp)[name] = (*cp)[name].Update(cs.Input, cs.Output)
+}
+
+func (cp *ConfigMap) Delete_config(name string) error { 
+
+	_, ok := (*cp)[name]
+	if ok {
+		delete(*cp, name)
+	} else {
+        return errors.New(fmt.Sprintf("Key error: %v not in ConfigMap", name))
+    }
+
+    return nil
+
+}
+
 type ConfigSave struct {
     Input string
     Output string
 }
 
+func (cs ConfigSave) Add(input string, output string) ConfigSave { 
+	cs.Input = input
+	cs.Output = output
+    return cs
+}
+
+func (cs ConfigSave) Update(input string, output string) ConfigSave { 
+    if input != "-" {
+        cs.Input = input
+    }
+    if output != "-" {
+        cs.Output = output
+    }
+    return cs
+}
+
+type InfoData struct {
+	Name string
+	Names_only bool
+	Defaults_only bool
+	Formats_only bool
+	Verbosity int
+}
+
+type DefaultsData struct {
+    Name string
+}
+
+type HistoryArray struct {
+    Calls []HsData
+}
+
+func (ha *HistoryArray) Add(hs HsData) { 
+    ha.Calls = append(ha.Calls, hs)
+}
+
+func (ha *HistoryArray) Print(print_type string, count int) {
+    fmt.Println("--- History ---\n ")
+    if print_type == "head" {
+        for i, v := range ha.Calls {
+            if i > count {
+                return
+            }
+            PrintHistoryLine(&v)
+        } 
+    }else if print_type == "tail" {
+        l := len(ha.Calls)
+        for i, v := range ha.Calls {
+            if i < (l - count) {
+                continue
+            }
+            PrintHistoryLine(&v)
+        } 
+    } else {
+        for _, v := range ha.Calls {
+            PrintHistoryLine(&v)
+        }
+    }
+}
+
+func PrintHistoryLine(hs *HsData) {
+    fmt.Printf("Files: %s%v%s -> %s%v%s\n    Terms: %s%v%s\n    Formats (%v): %s\"%v\"%s -> %s\"%v\"%s\n", colorBlue, hs.Input_file, colorNone, colorBlue, hs.Output_file, colorNone, colorGreen, hs.Terms, colorNone, hs.Name, colorRed, hs.LineFormat, colorNone, colorRed, hs.OutputFormat, colorNone)
+
+}
+
 type WriteFn func(*HsLine)
 
-
+const colorRed = "\033[0;31m"
+const colorGreen = "\033[0;32m"
+const colorBlue = "\033[0;34m"
+const colorNone = "\033[0m"
