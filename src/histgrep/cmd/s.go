@@ -48,12 +48,9 @@ func sRun(cmd *cobra.Command, args []string) {
 }
 
 func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
-
 	data.Input_file, _ = cmd.Flags().GetString("input")
 	data.Output_file, _ = cmd.Flags().GetString("output")
-
 	data.Name, _ = cmd.Flags().GetString("name")
-
 	if data.Name == "-" {
 		data.LineFormat, _ = cmd.Flags().GetString("line-format")
 		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
@@ -82,7 +79,6 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 			data.LineFormat = format_c.Input
 			data.OutputFormat = format_c.Output
 		}
-
 		log.Info(fmt.Sprintf("Fetech formatting: %v for %v", format_c, data.Name))
 	}
 	log.Info(fmt.Sprintf("Args data: %v", data))
@@ -95,31 +91,31 @@ TODO: Update the other functions to use this format.
 */
 
 func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
-    var names, separators, f_names, f_separators []string
+    format_data := hsdata.FormattingData{}
 	if data.LineFormat == "-" || data.OutputFormat == "-" {
-		names = append(names, "BLANK")
-		separators = append(names, "BLANK")
-		f_names = append(names, "BLANK")
-		f_separators = append(names, "BLANK")
+		format_data.Names = append(format_data.Names, "BLANK")
+		format_data.Separators = append(format_data.Separators, "BLANK")
+		format_data.Fnames = append(format_data.Fnames, "BLANK")
+		format_data.Fseparators = append(format_data.Fseparators, "BLANK")
 	} else {
-		formatInput(data.LineFormat, &names, &separators)
-		log.Debug(fmt.Sprintf("Formatting output: %v", data))
-		formatInput(data.OutputFormat, &f_names, &f_separators)
-	}
-	format_data := hsdata.FormattingData{
-		Names: &names,
-		Separators: &separators,
-		Fnames: &f_names,
-		Fseparators: &f_separators,
+        log.Debug(fmt.Sprintf("Formatting input: %v", format_data))
+		GetFormat(data.LineFormat, &format_data.Names, &format_data.Separators, &format_data.Positions)
+        log.Debug(fmt.Sprintf("Formatting input pos: %v", format_data))
+        // GetFormatPositons(data.LineFormat, &format_data.Positions)
+        log.Debug(fmt.Sprintf("Formatting output: %v", format_data))
+		GetFormat(data.OutputFormat, &format_data.Fnames, &format_data.Fseparators, &format_data.Fpositions)
+        log.Debug(fmt.Sprintf("Formatting output pos: %v", format_data))
+        // GetFormatPositons(data.OutputFormat, &format_data.Fpositions)
 	}
     return format_data
 }
 
-func formatInput(line string, names *[]string, separators *[]string) {
-	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), line))
-    words := strings.Split(line,"}")
+func GetFormat(curr string, names *[]string, separators *[]string, positions *[]hsdata.FormatPosition) {
+	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), curr))
+    words := strings.Split(curr,"}")
     var name_sep []string
     for _, word := range words {
+        pos := hsdata.FormatPosition{}
 		log.Debug(fmt.Sprintf("Word: %v", word))
 		name_sep = strings.Split(word,"{")
 		if strings.Contains(name_sep[0], "...") {
@@ -131,17 +127,65 @@ func formatInput(line string, names *[]string, separators *[]string) {
 		if len(name_sep) < 2 {
 			log.Debug(fmt.Sprintf("Short section - Name: N/A, Separator: %v", name_sep[0]))
 			*separators = append(*separators, name_sep[0])
+            pos.Separator = name_sep[0]
 		}else {
 			log.Debug(fmt.Sprintf("Name: %v, Separator: %v", name_sep[0], name_sep[1]))
 			if name_sep[0] == "" {
 				*names = append(*names, name_sep[1])
+                pos.Name = name_sep[1]
+                *positions = append(*positions, pos)
 				continue
 			}
 			*separators = append(*separators, name_sep[0])
 			*names = append(*names, name_sep[1])
+            pos.Separator = name_sep[0]
+            pos.Name = name_sep[1]
+            *positions = append(*positions, pos)
 		}
-		log.Debug("formatInput: Finished.")
     }
+    log.Debug("formatInput: Finished.")
+}
+
+func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
+	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), curr))
+    words := strings.Split(curr,"}")
+    var name_sep []string
+    var c_sep, c_name string
+    for _, word := range words {
+        log.Debug(fmt.Sprintf("Word: %v", word))
+        name_sep = strings.Split(word,"{")
+        if strings.Contains(name_sep[0], "...") {
+			c_sep, skip_by, skip_dir := SkipSeperators(name_sep[0])
+            if len(name_sep) < 2 {
+                c_name = "N/A"
+            } else {
+                c_name = name_sep[1]
+            }
+            *format_data = append(*format_data, hsdata.FormatPosition{Separator: c_sep, Name: c_name, Direction: skip_dir, Range: skip_by})
+        } else {
+            if len(name_sep) < 2 {
+                if len(name_sep) == 0 {
+                    continue
+                }
+                c_sep = name_sep[0]
+                c_name = "N/A"
+                log.Debug(fmt.Sprintf("Name: %v, Separator: %v", c_name, c_sep))
+                *format_data = append(*format_data, hsdata.FormatPosition{Separator: c_sep, Name: c_name})
+            } else {
+                log.Debug(fmt.Sprintf("Name: %v, Separator: %v", name_sep[0], name_sep[1]))
+                if name_sep[0] != "" {
+                    c_sep = name_sep[0]
+                    c_name = name_sep[1]
+                    *format_data = append(*format_data, hsdata.FormatPosition{Separator: c_sep, Name: c_name})
+                } else {
+                    c_name = name_sep[1]
+                    *format_data = append(*format_data, hsdata.FormatPosition{Name: c_name})
+                    continue
+                }
+            }
+        }
+    }
+    log.Debug("GetFormatPos: Finished.")
 }
 
 func RunLoopFile(data *hsdata.HsData, format_data *hsdata.FormattingData) {
@@ -211,7 +255,6 @@ func SaveHistory(data *hsdata.HsData) {
     history.Add(*data)
 	log.Info(history)
 	b, _ := json.Marshal(history)
-    log.Debug(fmt.Sprintf("%#v", b))
     os.WriteFile(file, b, os.ModePerm)
 
 }

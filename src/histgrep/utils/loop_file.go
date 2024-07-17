@@ -35,10 +35,10 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			}
 		}
 		if do_write {
-			if (*format_data.Names)[0] != "BLANK" {
-				words_map := getInputNames(current_line.Line, format_data.Names, format_data.Separators)
+			if (format_data.Names)[0] != "BLANK" {
+				words_map := getInputNames(current_line.Line, &format_data.Names, &format_data.Separators)
 				log.Debug(words_map)
-				current_line.Line = FormatLine(&words_map, format_data.Fnames, format_data.Fseparators)
+				current_line.Line = FormatLine(&words_map, &format_data.Fnames, &format_data.Fseparators)
 				log.Debug(current_line)
 			}
 			write_fn(&current_line)
@@ -61,7 +61,6 @@ func GetScanner(input_file string) (*bufio.Scanner, error) {
 		if err != nil {
 			return scanner, err
 		}
-		// defer file.Close() //close file when done with it
 		scanner = bufio.NewScanner(file) // read file by line
 	}
 

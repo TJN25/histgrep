@@ -24,10 +24,12 @@ type MapFormat map[string]string
 
 type FormattingData struct {
 	LineMap *MapFormat
-	Names *[]string
-    Separators *[]string
-	Fnames *[]string
-    Fseparators *[]string
+	Names []string
+    Separators []string
+	Fnames []string
+    Fseparators []string
+    Positions []FormatPosition
+    Fpositions []FormatPosition
 }
 
 type FormatArray []FormatPosition
