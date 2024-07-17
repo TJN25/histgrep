@@ -2,6 +2,7 @@ package utils
 import (
 	"strings"
 	"bufio"
+    "io"
 	"os"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -12,15 +13,24 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
 	log.Info(fmt.Sprintf("Names: %v, Separators: %v, fn: %v, fs: %v\n", format_data.Names, format_data.Separators, format_data.Fnames, format_data.Fseparators))
     fmt.Println("")
-	scanner, err := GetScanner(hs_dat.Input_file)
+	reader, err := GetScanner(hs_dat.Input_file)
 	var do_write bool = true
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Scanner error", err)
 		return err
 	}
 
-	for scanner.Scan() {
-		line := scanner.Text()
+    lines_remaining := true
+    for lines_remaining {
+        line, err := reader.ReadString('\n')
+        if err != nil {
+            if err == io.EOF {
+                break
+            }
+            fmt.Printf("Read: %s, error: %v\n", line, err)
+            continue
+        }
+		// line := reader.Text()
 		do_write = true
 
 		if strings.Contains(line, "histgrep") {
@@ -44,31 +54,27 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			write_fn(&current_line)
 		}
 	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
 	return nil
 }
 
-func GetScanner(input_file string) (*bufio.Scanner, error) {
+func GetScanner(input_file string) (*bufio.Reader, error) {
 
-	var scanner *bufio.Scanner
+	var reader *bufio.Reader
 	if input_file == "stdin" {
-		scanner = bufio.NewScanner(os.Stdin) // read file by line
+		reader = bufio.NewReader(os.Stdin) // read file by line
 	} else {
 		file, err := os.Open(input_file) //open file
 		if err != nil {
-			return scanner, err
+			return reader, err
 		}
-		scanner = bufio.NewScanner(file) // read file by line
+		reader = bufio.NewReader(file) // read file by line
 	}
 
-	return scanner, nil;
+	return reader, nil;
 }
 
 func WriteLine(line *hsdata.HsLine) {
-	_, err := line.F.WriteString(line.Line + "\n")
+	_, err := line.F.WriteString(line.Line)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -76,7 +82,7 @@ func WriteLine(line *hsdata.HsLine) {
 }
 
 func PrintLine(line *hsdata.HsLine) {
-    fmt.Fprintln(os.Stdout, line.Line)
+    fmt.Fprintf(os.Stdout, "%s", line.Line)
 }
 
 type MapFormat map[string]string
