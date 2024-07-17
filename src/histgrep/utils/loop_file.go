@@ -23,6 +23,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
     lines_remaining := true
     for lines_remaining {
         line, err := reader.ReadString('\n')
+        line, _ = strings.CutSuffix(line, "\n")
         if err != nil {
             if err == io.EOF {
                 break
@@ -74,7 +75,7 @@ func GetScanner(input_file string) (*bufio.Reader, error) {
 }
 
 func WriteLine(line *hsdata.HsLine) {
-	_, err := line.F.WriteString(line.Line)
+	_, err := line.F.WriteString(line.Line + "\n")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -82,7 +83,7 @@ func WriteLine(line *hsdata.HsLine) {
 }
 
 func PrintLine(line *hsdata.HsLine) {
-    fmt.Fprintf(os.Stdout, "%s", line.Line)
+    fmt.Fprintf(os.Stdout, "%s\n", line.Line)
 }
 
 type MapFormat map[string]string
