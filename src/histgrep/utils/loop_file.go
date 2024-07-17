@@ -49,7 +49,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			if (format_data.Names)[0] != "BLANK" {
 				words_map := getInputNames(current_line.Line, &format_data.Names, &format_data.Separators)
 				log.Debug(words_map)
-				current_line.Line = FormatLine(&words_map, &format_data.Fnames, &format_data.Fseparators)
+				current_line.Line = FormatLine(&words_map, &format_data.Fnames, &format_data.Fseparators, &format_data.Fpositions)
 				log.Debug(current_line)
 			}
 			write_fn(&current_line)
@@ -88,12 +88,25 @@ func PrintLine(line *hsdata.HsLine) {
 
 type MapFormat map[string]string
 
-func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string) string {
+func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string, f_positions *[]hsdata.FormatPosition) string {
 	log.Debug(fmt.Sprintf("Terms: %v, Names: %v, Separators: %v", terms, f_names, f_separators))
 	var line string = ""
 	sep_len := len(*f_separators)
+    pos_len := len(*f_positions)
 	for i, term := range *f_names {
+        if i < pos_len {
+            log.Info(fmt.Sprintf("color: %v", (*f_positions)[i].Color))
+            color := (*f_positions)[i].Color
+            if color == "red" {
+                line += hsdata.ColorRed
+            } else if color == "green" {
+                line += hsdata.ColorGreen
+            } else if color == "blue" {
+                line += hsdata.ColorBlue
+            }
+        }
 		line += (*terms)[term]
+        line += hsdata.ColorNone
 		if i < sep_len {
 			line += (*f_separators)[i]
 		}

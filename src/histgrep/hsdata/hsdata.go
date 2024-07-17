@@ -39,6 +39,7 @@ type FormatPosition struct {
 	Separator string
 	Range int
 	Direction int
+    Color string
 }
 
 type ConfigData struct {
@@ -143,13 +144,13 @@ func (ha *HistoryArray) Print(print_type string, count int) {
 }
 
 func PrintHistoryLine(hs *HsData) {
-    fmt.Printf("Files: %s%v%s -> %s%v%s\n    Terms: %s%v%s\n    Formats (%v): %s\"%v\"%s -> %s\"%v\"%s\n", colorBlue, hs.Input_file, colorNone, colorBlue, hs.Output_file, colorNone, colorGreen, hs.Terms, colorNone, hs.Name, colorRed, hs.LineFormat, colorNone, colorRed, hs.OutputFormat, colorNone)
+    fmt.Printf("Files: %s%v%s -> %s%v%s\n    Terms: %s%v%s\n    Formats (%v): %s\"%v\"%s -> %s\"%v\"%s\n", ColorBlue, hs.Input_file, ColorNone, ColorBlue, hs.Output_file, ColorNone, ColorGreen, hs.Terms, ColorNone, hs.Name, ColorRed, hs.LineFormat, ColorNone, ColorRed, hs.OutputFormat, ColorNone)
 
 }
 
 type WriteFn func(*HsLine)
 
-const colorRed = "\033[0;31m"
-const colorGreen = "\033[0;32m"
-const colorBlue = "\033[0;34m"
-const colorNone = "\033[0m"
+const ColorRed = "\033[0;31m"
+const ColorGreen = "\033[0;32m"
+const ColorBlue = "\033[0;34m"
+const ColorNone = "\033[0m"

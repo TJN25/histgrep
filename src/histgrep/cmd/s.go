@@ -114,6 +114,7 @@ func GetFormat(curr string, names *[]string, separators *[]string, positions *[]
 	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), curr))
     words := strings.Split(curr,"}")
     var name_sep []string
+    var name []string
     for _, word := range words {
         pos := hsdata.FormatPosition{}
 		log.Debug(fmt.Sprintf("Word: %v", word))
@@ -131,15 +132,33 @@ func GetFormat(curr string, names *[]string, separators *[]string, positions *[]
 		}else {
 			log.Debug(fmt.Sprintf("Name: %v, Separator: %v", name_sep[0], name_sep[1]))
 			if name_sep[0] == "" {
-				*names = append(*names, name_sep[1])
-                pos.Name = name_sep[1]
+                if strings.Contains(name_sep[1], ":") {
+                    name = strings.Split(name_sep[1],":")
+                    log.Info(fmt.Sprintf("Name and color: %v", name))
+                    *names = append(*names, name[0])
+                    pos.Name = name[0]
+                    pos.Color = name[1]
+                } else {
+                    *names = append(*names, name_sep[1])
+                    pos.Name = name_sep[1]
+                    pos.Color = "none"
+                }
                 *positions = append(*positions, pos)
 				continue
 			}
 			*separators = append(*separators, name_sep[0])
-			*names = append(*names, name_sep[1])
             pos.Separator = name_sep[0]
-            pos.Name = name_sep[1]
+                if strings.Contains(name_sep[1], ":") {
+                    name = strings.Split(name_sep[1],":")
+                    *names = append(*names, name[0])
+                    log.Info(fmt.Sprintf("Name and color: %v", name))
+                    pos.Name = name[0]
+                    pos.Color = name[1]
+                } else {
+                *names = append(*names, name_sep[1])
+                    pos.Name = name_sep[1]
+                    pos.Color = "none"
+                }
             *positions = append(*positions, pos)
 		}
     }
