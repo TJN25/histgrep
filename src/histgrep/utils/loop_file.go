@@ -113,7 +113,9 @@ func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string, f_p
 		line += (*terms)[term]
         line += hsdata.ColorNone
 		if i < sep_len {
+            line += hsdata.ColorGrey
 			line += (*f_separators)[i]
+            line += hsdata.ColorNone
 		}
 
 	}
@@ -127,6 +129,8 @@ func InsertColor(color string) string {
         return hsdata.ColorGreen
     } else if color == "blue" {
         return hsdata.ColorBlue
+    } else if color == "grey" {
+        return hsdata.ColorGrey
     }
     return hsdata.ColorNone
 }
