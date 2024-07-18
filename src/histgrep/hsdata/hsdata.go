@@ -40,6 +40,7 @@ type FormatPosition struct {
 	Range int
 	Direction int
     Color string
+    ColorMap map[string]string
 }
 
 type ConfigData struct {

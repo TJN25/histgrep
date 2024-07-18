@@ -96,14 +96,19 @@ func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string, f_p
 	for i, term := range *f_names {
         if i < pos_len {
             log.Info(fmt.Sprintf("color: %v", (*f_positions)[i].Color))
-            color := (*f_positions)[i].Color
-            if color == "red" {
-                line += hsdata.ColorRed
-            } else if color == "green" {
-                line += hsdata.ColorGreen
-            } else if color == "blue" {
-                line += hsdata.ColorBlue
+            // color := (*f_positions)[i].Color
+            colors := (*f_positions)[i].ColorMap
+            var color string
+            for k,  v := range colors {
+                log.Info(fmt.Sprintf("Color: %v = %v, term: %v, line: %v", k, v, term, (*terms)[term]))
+                if strings.Contains((*terms)[term], k) {
+                    color = v
+                    break
+                } else {
+                    color = colors["default"]
+                }
             }
+            line += InsertColor(color)
         }
 		line += (*terms)[term]
         line += hsdata.ColorNone
@@ -113,6 +118,17 @@ func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string, f_p
 
 	}
 	return line
+}
+
+func InsertColor(color string) string {
+    if color == "red" {
+        return hsdata.ColorRed
+    } else if color == "green" {
+        return hsdata.ColorGreen
+    } else if color == "blue" {
+        return hsdata.ColorBlue
+    }
+    return hsdata.ColorNone
 }
 
 func getInputNames(line string, names *[]string, separators *[]string) MapFormat {
