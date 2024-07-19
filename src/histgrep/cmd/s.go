@@ -52,7 +52,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
         data.FormatData = UseDefaults(data)
         log.Debug(data.FormatData)
     } else {
-		file := utils.GetDataPath("formats-new.json")
+		file := utils.GetDataPath("formats.json")
 		formatMap := hsdata.FormatMap{}
 		utils.FetchFormatting(file, &formatMap)
         format_data, ok := formatMap[data.Name]
@@ -257,7 +257,7 @@ func SkipSeperators(separator string) (string, int, int) {
 
 func UseDefaults(data *hsdata.HsData) hsdata.FormattingData{
 	file := utils.GetDataPath("defaults.json")
-	config_file := utils.GetDataPath("formats-new.json")
+	config_file := utils.GetDataPath("formats.json")
 	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
 	formatMap := hsdata.FormatMap{}
