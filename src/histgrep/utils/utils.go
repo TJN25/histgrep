@@ -69,13 +69,13 @@ func ErrorExit(msg string) {
 		os.Exit(1)
 }
 
-func FetchFormatting(file string, configMap *hsdata.ConfigMap) {
+func FetchFormatting(file string, fm *hsdata.FormatMap) {
 	jsonFile, err := os.ReadFile(file)
 	if err != nil {
         ErrorExit(fmt.Sprintf("Cannot find %v\n%v", file, err))
 	}
-	json.Unmarshal(jsonFile, configMap)
-    log.Info(fmt.Sprintf("FetchFormatting: %v, from %v", configMap, file))
+	json.Unmarshal(jsonFile, fm)
+    log.Info(fmt.Sprintf("FetchFormatting: %v, from %v", fm, file))
 }
 
 func FetchDefaults(file string, df *hsdata.DefaultsData) {

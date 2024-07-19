@@ -70,19 +70,19 @@ func infoRun(cmd *cobra.Command, args []string) {
 func DoFormats(data *hsdata.InfoData) {
 	file := utils.GetDataPath("formats.json")
 	log.Info(fmt.Sprintf("Using config file %v", file))
-	configMap := hsdata.ConfigMap{}
-	utils.FetchFormatting(file, &configMap)
+	formatMap := hsdata.FormatMap{}
+	utils.FetchFormatting(file, &formatMap)
 	if data.Name != "-" {
 		fmt.Println("\n--- Format ---\n ")
-		PrintOneFormat(configMap, data.Name)
+		PrintOneFormat(formatMap, data.Name)
 		return
 	} 
 	fmt.Println("\n--- Formats ---\n ")
-	PrintFormats(configMap, data.Names_only)
+	PrintFormats(formatMap, data.Names_only)
 }
 
-func PrintFormats(configMap hsdata.ConfigMap, names_only bool) {
-	for k, v := range configMap {
+func PrintFormats(fm hsdata.FormatMap, names_only bool) {
+	for k, v := range fm {
 		if names_only {
 			fmt.Println(k)
 		} else {
@@ -91,8 +91,8 @@ func PrintFormats(configMap hsdata.ConfigMap, names_only bool) {
 	}
 }
 
-func PrintOneFormat(configMap hsdata.ConfigMap, name string) {
-	v, _ := configMap[name]
+func PrintOneFormat(fm hsdata.FormatMap, name string) {
+	v, _ := fm[name]
 	fmt.Printf("Name: %v \n    input: \"%v\" \n    output: \"%v\"\n",name, v.Input, v.Output)
 }
 
@@ -102,20 +102,20 @@ func DoDefaults(data *hsdata.InfoData) {
 	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
 	fmt.Println("\n--- Defaults ---\n ")
-	configMap := hsdata.ConfigMap{}
+	formatMap := hsdata.FormatMap{}
 	defaults := hsdata.DefaultsData{}
-	utils.FetchFormatting(config_file, &configMap)
+	utils.FetchFormatting(config_file, &formatMap)
 	utils.FetchDefaults(file, &defaults)
-    defaultsConfig := configMap.Get(defaults.Name)
+    defaultsConfig := formatMap.Get(defaults.Name)
 
 	PrintDefaults(defaultsConfig, defaults.Name, data.Names_only)
 }
 
-func PrintDefaults(cs hsdata.ConfigSave, name string, names_only bool) {
+func PrintDefaults(fm hsdata.FormattingData, name string, names_only bool) {
     if names_only {
         fmt.Println(name)
     } else {
-        fmt.Printf("Name: %v \n    input: \"%v\" \n    output: \"%v\"\n",name, cs.Input, cs.Output)
+        fmt.Printf("Name: %v \n    input: \"%v\" \n    output: \"%v\"\n",name, fm.Input, fm.Output)
     }
 }
 

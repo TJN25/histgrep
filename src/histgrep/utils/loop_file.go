@@ -9,9 +9,9 @@ import (
 	"github.com/TJN25/histgrep/hsdata"
 )
 
-func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine, format_data *hsdata.FormattingData) error {
+func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) error {
 	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
-	log.Info(fmt.Sprintf("Names: %v, Separators: %v, fn: %v, fs: %v\n", format_data.Names, format_data.Separators, format_data.Fnames, format_data.Fseparators))
+	log.Info(fmt.Sprintf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes))
     fmt.Println("")
 	reader, err := GetScanner(hs_dat.Input_file)
 	var do_write bool = true
@@ -31,7 +31,6 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
             fmt.Printf("Read: %s, error: %v\n", line, err)
             continue
         }
-		// line := reader.Text()
 		do_write = true
 
 		if strings.Contains(line, "histgrep") {
@@ -39,12 +38,6 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 		}
 		for _, term := range hs_dat.Terms {
 			if strings.Contains(line, term) {
-                if !hs_dat.KeepCommonCmds {
-                    if strings.Contains(line, "cd") || strings.Contains(line, "ls") || strings.Contains(line, "pwd") || line == "ll" || strings.Contains(line, "exit") || strings.Contains(line, "clear") || strings.Contains(line, "cat") || strings.Contains(line, "more") || strings.Contains(line, "less") {
-                        do_write = false
-                        break 
-                    }
-                }
 				current_line.Line = line
 			}else {
 				do_write = false
@@ -52,13 +45,15 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			}
 		}
 		if do_write {
-			if (format_data.Names)[0] != "BLANK" {
-				words_map := getInputNames(current_line.Line, &format_data.Names, &format_data.Separators)
+			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
+				words_map := getInputNames(current_line.Line, &hs_dat.FormatData)
 				log.Debug(words_map)
-				current_line.Line = FormatLine(&words_map, &format_data.Fnames, &format_data.Fseparators, &format_data.Fpositions)
+				current_line.Line = FormatLine(&words_map, &hs_dat.FormatData)
 				log.Debug(current_line)
 			}
-			write_fn(&current_line)
+            if current_line.Line != "" {
+                write_fn(&current_line)
+            }
 		}
 	}
 	return nil
@@ -94,38 +89,71 @@ func PrintLine(line *hsdata.HsLine) {
 
 type MapFormat map[string]string
 
-func FormatLine(terms *MapFormat, f_names *[]string, f_separators *[]string, f_positions *[]hsdata.FormatPosition) string {
-	log.Debug(fmt.Sprintf("Terms: %v, Names: %v, Separators: %v", terms, f_names, f_separators))
-	var line string = ""
-	sep_len := len(*f_separators)
-    pos_len := len(*f_positions)
-	for i, term := range *f_names {
-        if i < pos_len {
-            log.Info(fmt.Sprintf("color: %v", (*f_positions)[i].Color))
-            // color := (*f_positions)[i].Color
-            colors := (*f_positions)[i].ColorMap
-            var color string
-            for k,  v := range colors {
-                log.Info(fmt.Sprintf("Color: %v = %v, term: %v, line: %v", k, v, term, (*terms)[term]))
-                if strings.Contains((*terms)[term], k) {
-                    color = v
+func FormatLine(terms *MapFormat, format_data *hsdata.FormattingData) string {
+    f_keys := (*format_data).Output["keys"]
+    f_separators := (*format_data).Output["separators"]
+    f_colors := format_data.Color
+    f_excludes := (*format_data).Excludes
+    log.Debug(fmt.Sprintf("Terms: %v, Names: %v, Separators: %v", terms, f_keys, f_separators))
+    var line string = ""
+    sep_len := len(f_separators)
+    for i, term := range f_keys {
+        excludes, ok := f_excludes[term]
+        if ok {
+            starts_with, ok := excludes["starts_with"]
+            if ok {
+            for _, exclude := range starts_with {
+                if strings.HasPrefix((*terms)[term], exclude) {
+                    return ""
+                }
+            }
+            }
+            contains, ok := excludes["contains"]
+            if ok {
+            for _, exclude := range contains {
+                if strings.Contains((*terms)[term], exclude) {
+                    return ""
+                }
+            }
+            }
+            ends_with, ok := excludes["ends_with"]
+            if ok {
+            for _, exclude := range ends_with {
+                if strings.HasSuffix((*terms)[term], exclude) {
+                    return ""
+                }
+            }
+            }
+        }
+        color_map, ok := f_colors[term]
+        if ok {
+            color := color_map["default"]
+            for key, try_color := range color_map {
+                if strings.Contains((*terms)[term], key) {
+                    color = try_color
                     break
-                } else {
-                    color = colors["default"]
                 }
             }
             line += InsertColor(color)
+        } else {
+            color := "white"
+            line += InsertColor(color)
         }
-		line += (*terms)[term]
+        line += (*terms)[term]
         line += hsdata.ColorNone
-		if i < sep_len {
-            line += hsdata.ColorGrey
-			line += (*f_separators)[i]
+        if i < sep_len {
+            color_map, ok := f_colors["SEPARATOR"]
+            if ok {
+                line += InsertColor(color_map["default"])
+            } else {
+                line += hsdata.ColorNone
+            }
+            line += f_separators[i]
             line += hsdata.ColorNone
-		}
+        }
 
-	}
-	return line
+    }
+    return line
 }
 
 func InsertColor(color string) string {
@@ -141,14 +169,16 @@ func InsertColor(color string) string {
     return hsdata.ColorNone
 }
 
-func getInputNames(line string, names *[]string, separators *[]string) MapFormat {
-	log.Debug(fmt.Sprintf("%v: Line: %v, Names: %v, Separators: %v", CallerName(0), line, names, separators))
+func getInputNames(line string, format_data *hsdata.FormattingData) MapFormat {
+	log.Debug(fmt.Sprintf("%v: Line: %v, Keys: %v, Separators: %v", CallerName(0), line, (*format_data).Input["keys"], (*format_data).Input["separators"]))
+    keys := (*format_data).Input["keys"]
+    separators := (*format_data).Input["separators"]
 	var words = make(MapFormat)
 	var curr []string
 	var remainder string = line
 	var idx int = 0
 	var separator_name string
-	for i, separator := range *separators {
+	for i, separator := range separators {
 		switch separator {
 			case " ":
 				separator_name = "SPACE"
@@ -170,11 +200,11 @@ func getInputNames(line string, names *[]string, separators *[]string) MapFormat
 		if separator == "" {
 			continue
 		}
-		if i < len(*names) {
-			words[(*names)[i]] = curr[0]
+		if i < len(keys) {
+			words[keys[i]] = curr[0]
 		}
 		if len(curr) < 2 {
-			idx = len(*names)
+			idx = len(keys)
 			break
 		}
 		remainder = curr[1]
@@ -183,8 +213,8 @@ func getInputNames(line string, names *[]string, separators *[]string) MapFormat
 			break
 		}
 	}
-	if idx < len(*names) {
-		words[(*names)[idx]] = remainder
+	if idx < len(keys) {
+		words[keys[idx]] = remainder
 	}
 	return words
 }

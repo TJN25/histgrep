@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// sCmd represents the s command
 var sCmd = &cobra.Command{
 	Use:   "s",
 	Short: "Search files",
@@ -24,10 +23,7 @@ var sCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(sCmd)
-
 	sCmd.Flags().StringP("input", "i", "stdin", "Input file (leave blank for stdin)")
-	sCmd.Flags().StringP("line-format", "l", "-", "Format of the line e.g. \"{foo}:{bar}:{string}\"")
-	sCmd.Flags().StringP("output-format", "f", "-", "Format for the output e.g. \"{foo}\\t{bar}\\t{string}\"")
 	sCmd.Flags().StringP("output", "o", "stdout", "Output file (leave blank for stdout)")
 	sCmd.Flags().StringP("name", "n", "-", "Name of saved format (add with histgrep add-format -n [name] -i [input] -o [output])")
 	sCmd.Flags().BoolP("common-cmds", "c", false, "Keep common commands such as cd, ls and cat")
@@ -40,12 +36,11 @@ func sRun(cmd *cobra.Command, args []string) {
     verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
 	utils.SetVerbosity(verbosity)
 	sGetArgs(cmd, &data)
-    log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Input Format: %v\n    Output Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.LineFormat, data.OutputFormat))
+    log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
-    format_data := DoFormatting(&data)
-    RunLoopFile(&data, &format_data)
-    SaveHistory(&data)
-
+    DoFormatting(&data)
+    RunLoopFile(&data)
+    // SaveHistory(&data)
 }
 
 func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
@@ -54,34 +49,20 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Name, _ = cmd.Flags().GetString("name")
 	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
 	if data.Name == "-" {
-		data.LineFormat, _ = cmd.Flags().GetString("line-format")
-		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
-        if data.LineFormat == "-" || data.OutputFormat == "-" {
-            UseDefaults(data)
-        }
+        data.FormatData = UseDefaults(data)
+        log.Debug(data.FormatData)
     } else {
-		file := utils.GetDataPath("formats.json")
-		configMap := hsdata.ConfigMap{}
-		utils.FetchFormatting(file, &configMap)
-		format_c, _:= configMap[data.Name]
-		if format_c.Input == "" {
-			data.LineFormat, _ = cmd.Flags().GetString("line-format")
-			data.OutputFormat, _ = cmd.Flags().GetString("output-format")
-			if data.LineFormat == "-" || data.OutputFormat == "-" {
-				utils.ErrorExit(fmt.Sprintf("Cannot find %v in %v", data.Name, file))
-			}
-			config_data := hsdata.ConfigData{
-				Input: data.LineFormat,
-				Output: data.OutputFormat,
-				Name: data.Name,
-				Path: file,
-			}
-			add(&config_data)
-		} else {
-			data.LineFormat = format_c.Input
-			data.OutputFormat = format_c.Output
-		}
-		log.Info(fmt.Sprintf("Fetech formatting: %v for %v", format_c, data.Name))
+		file := utils.GetDataPath("formats-new.json")
+		formatMap := hsdata.FormatMap{}
+		utils.FetchFormatting(file, &formatMap)
+        format_data, ok := formatMap[data.Name]
+        if ok {
+            data.FormatData = format_data
+        } else {
+            utils.ErrorExit(fmt.Sprintf("Format not found: %v", data.Name))
+        }
+        data.FormatData = formatMap[data.Name]
+        log.Debug(formatMap)
 	}
 	log.Info(fmt.Sprintf("Args data: %v", data))
 }
@@ -99,22 +80,6 @@ TODO: add a feature that allows each search term to have a set of exclude terms.
 
 func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
     format_data := hsdata.FormattingData{}
-	if data.LineFormat == "-" || data.OutputFormat == "-" {
-		format_data.Names = append(format_data.Names, "BLANK")
-		format_data.Separators = append(format_data.Separators, "BLANK")
-		format_data.Fnames = append(format_data.Fnames, "BLANK")
-		format_data.Fseparators = append(format_data.Fseparators, "BLANK")
-	} else {
-        log.Debug(fmt.Sprintf("Formatting input: %v", format_data))
-		GetFormat(data.LineFormat, &format_data.Names, &format_data.Separators, &format_data.Positions)
-        log.Debug(fmt.Sprintf("Formatting input pos: %v", format_data))
-        // GetFormatPositons(data.LineFormat, &format_data.Positions)
-        log.Debug(fmt.Sprintf("Formatting output: %v", format_data))
-		GetFormat(data.OutputFormat, &format_data.Fnames, &format_data.Fseparators, &format_data.Fpositions)
-        log.Debug(fmt.Sprintf("Formatting output pos: %v", format_data))
-        // GetFormatPositons(data.OutputFormat, &format_data.Fpositions)
-	}
-    fmt.Println(format_data)
     return format_data
 }
 
@@ -250,11 +215,11 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
     log.Debug("GetFormatPos: Finished.")
 }
 
-func RunLoopFile(data *hsdata.HsData, format_data *hsdata.FormattingData) {
+func RunLoopFile(data *hsdata.HsData) {
 	var err error
 	line := hsdata.HsLine{}
 	if data.Output_file == "stdout" {
-		err = utils.LoopFile(data, utils.PrintLine, line, format_data)
+		err = utils.LoopFile(data, utils.PrintLine, line)
 	} else {
 		f, err := os.Create(data.Output_file)
 		if err != nil {
@@ -264,7 +229,7 @@ func RunLoopFile(data *hsdata.HsData, format_data *hsdata.FormattingData) {
 	defer f.Close()
 
 		line.F = f
-		err = utils.LoopFile(data, utils.WriteLine, line, format_data)
+		err = utils.LoopFile(data, utils.WriteLine, line)
 	}
 	if err != nil {
 		log.Panic(err)
@@ -290,19 +255,16 @@ func SkipSeperators(separator string) (string, int, int) {
 	return current_separator, skip_by, skip_dir
 }
 
-func UseDefaults(data *hsdata.HsData) {
+func UseDefaults(data *hsdata.HsData) hsdata.FormattingData{
 	file := utils.GetDataPath("defaults.json")
-	config_file := utils.GetDataPath("formats.json")
+	config_file := utils.GetDataPath("formats-new.json")
 	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
-	configMap := hsdata.ConfigMap{}
+	formatMap := hsdata.FormatMap{}
 	defaults := hsdata.DefaultsData{}
-	utils.FetchFormatting(config_file, &configMap)
+	utils.FetchFormatting(config_file, &formatMap)
 	utils.FetchDefaults(file, &defaults)
-    defaultsConfig := configMap.Get(defaults.Name)
-    data.Name = defaults.Name
-    data.LineFormat = defaultsConfig.Input
-    data.OutputFormat = defaultsConfig.Output
+    return formatMap.Get(defaults.Name)
 }
 
 func SaveHistory(data *hsdata.HsData) {
@@ -318,6 +280,6 @@ func SaveHistory(data *hsdata.HsData) {
 	log.Info(history)
 	b, _ := json.Marshal(history)
     os.WriteFile(file, b, os.ModePerm)
-
 }
+
 const PERIOD byte = 46

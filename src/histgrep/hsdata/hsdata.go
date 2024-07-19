@@ -15,34 +15,27 @@ type HsData struct {
 	Input_file string
 	Output_file string
 	Terms []string
-	LineFormat string
-	OutputFormat string
+    FormatData FormattingData
     Name string
     KeepCommonCmds bool
 }
 
-type MapFormat map[string]string
+// type MapString map[string]string
+// type MapArray map[string][]string
+// type MapMap map[string]map[string]string
 
-type JsonMap map[string]JsonFormat
-
-type JsonFormat struct {
+type FormattingData struct {
     Input map[string][]string
     Output map[string][]string
     Color map[string]map[string]string
-    Excludes map[string][]string
+    Excludes map[string]map[string][]string
 }
 
-type FormattingData struct {
-	LineMap *MapFormat
-	Names []string
-    Separators []string
-	Fnames []string
-    Fseparators []string
-    Positions []FormatPosition
-    Fpositions []FormatPosition
-}
+type FormatMap map[string]FormattingData
 
-type FormatArray []FormatPosition
+func (fm *FormatMap) Get(name string) FormattingData { 
+    return (*fm)[name]
+}
 
 type FormatPosition struct {
 	Name string
@@ -155,7 +148,8 @@ func (ha *HistoryArray) Print(print_type string, count int) {
 }
 
 func PrintHistoryLine(hs *HsData) {
-    fmt.Printf("Files: %s%v%s -> %s%v%s\n    Terms: %s%v%s\n    Formats (%v): %s\"%v\"%s -> %s\"%v\"%s\n", ColorBlue, hs.Input_file, ColorNone, ColorBlue, hs.Output_file, ColorNone, ColorGreen, hs.Terms, ColorNone, hs.Name, ColorRed, hs.LineFormat, ColorNone, ColorRed, hs.OutputFormat, ColorNone)
+    fmt.Println(hs)
+    // fmt.Printf("Files: %s%v%s -> %s%v%s\n    Terms: %s%v%s\n    Formats (%v): %s\"%v\"%s -> %s\"%v\"%s\n", ColorBlue, hs.Input_file, ColorNone, ColorBlue, hs.Output_file, ColorNone, ColorGreen, hs.Terms, ColorNone, hs.Name, ColorRed, hs.LineFormat, ColorNone, ColorRed, hs.OutputFormat, ColorNone)
 
 }
 
