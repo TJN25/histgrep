@@ -39,6 +39,12 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 		}
 		for _, term := range hs_dat.Terms {
 			if strings.Contains(line, term) {
+                if !hs_dat.KeepCommonCmds {
+                    if strings.Contains(line, "cd") || strings.Contains(line, "ls") || strings.Contains(line, "pwd") || line == "ll" || strings.Contains(line, "exit") || strings.Contains(line, "clear") || strings.Contains(line, "cat") || strings.Contains(line, "more") || strings.Contains(line, "less") {
+                        do_write = false
+                        break 
+                    }
+                }
 				current_line.Line = line
 			}else {
 				do_write = false

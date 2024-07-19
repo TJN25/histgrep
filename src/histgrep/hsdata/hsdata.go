@@ -18,9 +18,19 @@ type HsData struct {
 	LineFormat string
 	OutputFormat string
     Name string
+    KeepCommonCmds bool
 }
 
 type MapFormat map[string]string
+
+type JsonMap map[string]JsonFormat
+
+type JsonFormat struct {
+    Input map[string][]string
+    Output map[string][]string
+    Color map[string]map[string]string
+    Excludes map[string][]string
+}
 
 type FormattingData struct {
 	LineMap *MapFormat

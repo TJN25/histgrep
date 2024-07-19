@@ -30,6 +30,7 @@ func init() {
 	sCmd.Flags().StringP("output-format", "f", "-", "Format for the output e.g. \"{foo}\\t{bar}\\t{string}\"")
 	sCmd.Flags().StringP("output", "o", "stdout", "Output file (leave blank for stdout)")
 	sCmd.Flags().StringP("name", "n", "-", "Name of saved format (add with histgrep add-format -n [name] -i [input] -o [output])")
+	sCmd.Flags().BoolP("common-cmds", "c", false, "Keep common commands such as cd, ls and cat")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
 
@@ -51,6 +52,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Input_file, _ = cmd.Flags().GetString("input")
 	data.Output_file, _ = cmd.Flags().GetString("output")
 	data.Name, _ = cmd.Flags().GetString("name")
+	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
 	if data.Name == "-" {
 		data.LineFormat, _ = cmd.Flags().GetString("line-format")
 		data.OutputFormat, _ = cmd.Flags().GetString("output-format")
@@ -90,6 +92,11 @@ TODO: makes sense and allows the later functions to work with the new format.
 TODO: Update the other functions to use this format.
 */
 
+
+/*
+TODO: add a feature that allows each search term to have a set of exclude terms.
+*/
+
 func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
     format_data := hsdata.FormattingData{}
 	if data.LineFormat == "-" || data.OutputFormat == "-" {
@@ -107,6 +114,7 @@ func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
         log.Debug(fmt.Sprintf("Formatting output pos: %v", format_data))
         // GetFormatPositons(data.OutputFormat, &format_data.Fpositions)
 	}
+    fmt.Println(format_data)
     return format_data
 }
 
