@@ -83,6 +83,3 @@ Provide the name of the format you wish to use as a default. If this is missing 
 }
 ```
 
-
-[MIT](https://github.com/charmbracelet/glow/raw/master/LICENSE)
-
