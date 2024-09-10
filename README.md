@@ -10,6 +10,8 @@ a quick and efficient way to find the information you need.
 
 ## Installation
 
+Binaries for linux and macOS are provided in the `linux` and `macos` subdirectories.
+
 ### Build (requires Go 1.21+)
 
 ```bash
