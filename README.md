@@ -18,10 +18,25 @@ cd histgrep/src/histgrep
 go build
 ```
 
+### SBGrid specific
+Add an alias to `.bashrc-USER` file:
+```
+hs (
+    sbhistory | histgrep s -n sbgrid-USER "$@"
+)
+```
+
+Run a search with `hs foo bar baz`.
+The search has been configured to exclude commands such as `cd`, `ls`, and `cat`. To change this, modify the excludes section in `/.histgrep/formats.json`. 
+
 ## Basic search
 
-Run with `histgrep s -i input_file.txt search terms here` or `cat input_file.txt | histgrep s search terms here`.
+Run with `histgrep s -i input_file.txt foo bar baz` or `cat input_file.txt | histgrep s foo bar baz`.
 You can redirect the output to a file using the -o flag.
+
+## Colors
+
+Turn colors off with the `-f` or `--no-color` flag.
 
 ## Configuration
 
