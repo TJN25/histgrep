@@ -21,6 +21,7 @@ type HsData struct {
 	KeepCommonCmds bool
 	NoColor        bool
 	UsePager       bool
+	Reader         interface{}
 }
 
 // type MapString map[string]string

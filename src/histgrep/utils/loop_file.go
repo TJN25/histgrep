@@ -3,28 +3,41 @@ package utils
 import (
 	"bufio"
 	"fmt"
-	"github.com/TJN25/histgrep/hsdata"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"strings"
+
+	"github.com/TJN25/histgrep/hsdata"
+	log "github.com/sirupsen/logrus"
 )
 
 func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) ([]string, error) {
 	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
 	log.Info(fmt.Sprintf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes))
 	fmt.Println("")
-	reader, err := GetScanner(hs_dat.Input_file)
-	if err != nil {
-		var formatted_lines []string
-		fmt.Fprintln(os.Stderr, "Scanner error", err)
-		return formatted_lines, err
+	_, ok := hs_dat.Reader.(*BufferedInput)
+	if !ok {
+		var err error
+		hs_dat.Reader, err = GetScanner(hs_dat.Input_file)
+		if err != nil {
+			var formatted_lines []string
+			fmt.Fprintln(os.Stderr, "Scanner error", err)
+			return formatted_lines, err
+		}
 	}
 
 	lines_remaining := true
+	match_found := false
 	for lines_remaining {
-		line, err := reader.ReadString('\n')
-		line, _ = strings.CutSuffix(line, "\n")
+		var line string
+		var err error
+		switch r := hs_dat.Reader.(type) {
+		case *bufio.Reader:
+			line, err = r.ReadString('\n')
+			line, _ = strings.CutSuffix(line, "\n")
+		case *BufferedInput:
+			line, err = r.ReadLine()
+		}
 		if err != nil {
 			if err == io.EOF {
 				break
@@ -49,6 +62,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			current_line.Line = line
 		}
 		if do_write {
+			match_found = true
 			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
 				words_map := getInputNames(current_line.Line, &hs_dat.FormatData)
 				log.Debug(words_map)
@@ -60,23 +74,30 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			}
 		}
 	}
+	if !match_found {
+		return []string{"No matches found for the given terms"}, nil
+	}
 	return current_line.OutLines, nil
 }
 
-func GetScanner(input_file string) (*bufio.Reader, error) {
-
-	var reader *bufio.Reader
+func GetScanner(input_file string) (interface{}, error) {
 	if input_file == "stdin" {
-		reader = bufio.NewReader(os.Stdin) // read file by line
-	} else {
-		file, err := os.Open(input_file) //open file
-		if err != nil {
-			return reader, err
+		var lines []string
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
 		}
-		reader = bufio.NewReader(file) // read file by line
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+		return &BufferedInput{content: lines}, nil
+	} else {
+		file, err := os.Open(input_file)
+		if err != nil {
+			return nil, err
+		}
+		return bufio.NewReader(file), nil
 	}
-
-	return reader, nil
 }
 
 func WriteLine(line *hsdata.HsLine) {
@@ -238,4 +259,22 @@ func getInputNames(line string, format_data *hsdata.FormattingData) MapFormat {
 		words[keys[idx]] = remainder
 	}
 	return words
+}
+
+type BufferedInput struct {
+	content []string
+	index   int
+}
+
+func (bi *BufferedInput) ReadLine() (string, error) {
+	if bi.index >= len(bi.content) {
+		return "", io.EOF
+	}
+	line := bi.content[bi.index]
+	bi.index++
+	return line, nil
+}
+
+func (bi *BufferedInput) Reset() {
+	bi.index = 0
 }

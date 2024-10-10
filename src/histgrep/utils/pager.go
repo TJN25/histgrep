@@ -53,6 +53,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyEnter:
 				m.searchMode = false
 				m.data.Terms = strings.Fields(m.searchInput.Value())
+				if bufferedInput, ok := m.data.Reader.(*BufferedInput); ok {
+					bufferedInput.Reset()
+				}
 				m.Content, _ = LoopFile(m.data, SaveLine, m.line)
 				print(m.Content[0])
 				m.cursor = 0
@@ -138,7 +141,7 @@ func (m Model) View() string {
 	} else {
 
 		terms := boldStyle.Styled(strings.Join(m.terms, ", "))
-		statusInfo := regularStyle.Styled(fmt.Sprintf(" line %d of %d (press q or C-c to quit)", m.cursor+1, len(m.Content)))
+		statusInfo := regularStyle.Styled(fmt.Sprintf(" line %d of %d (use '/' to search or press q to quit)", m.cursor+1, len(m.Content)))
 
 		statusLine = statusStyle.Styled(fmt.Sprintf("%s%s", terms, statusInfo))
 	}
