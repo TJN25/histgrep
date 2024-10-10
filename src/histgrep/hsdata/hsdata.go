@@ -7,8 +7,9 @@ import (
 )
 
 type HsLine struct {
-	Line string
-	F    *os.File
+	Line     string
+	F        *os.File
+	OutLines []string
 }
 
 type HsData struct {
@@ -19,6 +20,7 @@ type HsData struct {
 	Name           string
 	KeepCommonCmds bool
 	NoColor        bool
+	UsePager       bool
 }
 
 // type MapString map[string]string

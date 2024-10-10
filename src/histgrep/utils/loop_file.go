@@ -10,15 +10,15 @@ import (
 	"strings"
 )
 
-func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) error {
+func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) ([]string, error) {
 	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
 	log.Info(fmt.Sprintf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes))
 	fmt.Println("")
 	reader, err := GetScanner(hs_dat.Input_file)
-	var do_write bool = true
 	if err != nil {
+		var formatted_lines []string
 		fmt.Fprintln(os.Stderr, "Scanner error", err)
-		return err
+		return formatted_lines, err
 	}
 
 	lines_remaining := true
@@ -32,18 +32,21 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			fmt.Printf("Read: %s, error: %v\n", line, err)
 			continue
 		}
-		do_write = true
-
-		if strings.Contains(line, "histgrep") {
-			continue
-		}
-		for _, term := range hs_dat.Terms {
-			if strings.Contains(line, term) {
-				current_line.Line = line
-			} else {
-				do_write = false
-				break
+		do_write := true
+		if len(hs_dat.Terms) > 0 {
+			if strings.Contains(line, "histgrep") {
+				continue
 			}
+			for _, term := range hs_dat.Terms {
+				if strings.Contains(line, term) {
+					current_line.Line = line
+				} else {
+					do_write = false
+					break
+				}
+			}
+		} else {
+			current_line.Line = line
 		}
 		if do_write {
 			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
@@ -57,7 +60,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			}
 		}
 	}
-	return nil
+	return current_line.OutLines, nil
 }
 
 func GetScanner(input_file string) (*bufio.Reader, error) {
@@ -86,6 +89,10 @@ func WriteLine(line *hsdata.HsLine) {
 
 func PrintLine(line *hsdata.HsLine) {
 	fmt.Fprintf(os.Stdout, "%s\n", line.Line)
+}
+
+func SaveLine(line *hsdata.HsLine) {
+	line.OutLines = append(line.OutLines, line.Line)
 }
 
 type MapFormat map[string]string

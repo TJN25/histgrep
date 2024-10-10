@@ -1,6 +1,5 @@
 /*
 Copyright © 2024 dani
-
 */
 package cmd
 
@@ -10,14 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "histgrep",
-	Short: "Search through history files and logs.",
-	Long: `Search and manipulate history and log files to check past actions 
-	and create scripts that can recreate past actions`,
+	Short: "HistGrep - Enhanced Command History Search",
+	Long:  `HistGrep is a terminal-based command-line tool for searching through history files or other logs.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -43,5 +39,3 @@ func init() {
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
-

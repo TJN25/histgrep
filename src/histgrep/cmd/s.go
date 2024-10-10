@@ -28,6 +28,7 @@ func init() {
 	sCmd.Flags().StringP("name", "n", "-", "Name of saved format (add with histgrep add-format -n [name] -i [input] -o [output])")
 	sCmd.Flags().BoolP("common-cmds", "c", false, "Keep common commands such as cd, ls and cat")
 	sCmd.Flags().BoolP("no-color", "f", false, "Do not include colors in output")
+	sCmd.Flags().BoolP("pager", "p", false, "Display output in pager (Bubble Tea)")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
 
@@ -49,6 +50,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Name, _ = cmd.Flags().GetString("name")
 	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
 	data.NoColor, _ = cmd.Flags().GetBool("no-color")
+	data.UsePager, _ = cmd.Flags().GetBool("pager")
 	if data.Name == "-" {
 		data.FormatData = UseDefaults(data)
 		log.Debug(data.FormatData)
@@ -218,8 +220,14 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
 func RunLoopFile(data *hsdata.HsData) {
 	var err error
 	line := hsdata.HsLine{}
-	if data.Output_file == "stdout" {
-		err = utils.LoopFile(data, utils.PrintLine, line)
+	if data.UsePager {
+		formatted_lines, err := utils.LoopFile(data, utils.SaveLine, line)
+		if err != nil {
+			log.Panic(err)
+		}
+		utils.ViewFileWithPager(formatted_lines, data, line)
+	} else if data.Output_file == "stdout" {
+		_, err = utils.LoopFile(data, utils.PrintLine, line)
 	} else {
 		f, err := os.Create(data.Output_file)
 		if err != nil {
@@ -229,7 +237,7 @@ func RunLoopFile(data *hsdata.HsData) {
 		defer f.Close()
 
 		line.F = f
-		err = utils.LoopFile(data, utils.WriteLine, line)
+		_, err = utils.LoopFile(data, utils.WriteLine, line)
 	}
 	if err != nil {
 		log.Panic(err)
