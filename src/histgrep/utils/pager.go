@@ -30,11 +30,11 @@ type Model struct {
 func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter terms..."
-	ti.CharLimit = 100
+	ti.CharLimit = 500
 
 	ci := textinput.New()
 	ci.Placeholder = ""
-	ci.CharLimit = 100
+	ci.CharLimit = 500
 
 	return Model{
 		Content:      content,

@@ -14,6 +14,7 @@ type HsLine struct {
 
 type HsData struct {
 	Input_file     string
+	Files          []string
 	Output_file    string
 	Terms          []string
 	ExcludeTerms   []string
@@ -23,6 +24,7 @@ type HsData struct {
 	NoColor        bool
 	UsePager       bool
 	IncludeNumbers bool
+	CaseSensitive  bool
 	Reader         interface{}
 }
 

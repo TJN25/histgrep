@@ -19,7 +19,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 	_, ok := hs_dat.Reader.(*BufferedInput)
 	if !ok {
 		var err error
-		hs_dat.Reader, err = GetScanner(hs_dat.Input_file)
+		hs_dat.Reader, err = GetScanner(hs_dat)
 		if err != nil {
 			var formatted_lines []string
 			fmt.Fprintln(os.Stderr, "Scanner error", err)
@@ -99,8 +99,8 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 	return current_line.OutLines, nil
 }
 
-func GetScanner(input_file string) (interface{}, error) {
-	if input_file == "stdin" {
+func GetScanner(hs_dat *hsdata.HsData) (interface{}, error) {
+	if hs_dat.Input_file == "stdin" {
 		var lines []string
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -109,14 +109,33 @@ func GetScanner(input_file string) (interface{}, error) {
 		if err := scanner.Err(); err != nil {
 			return nil, err
 		}
+		if len(lines) == 0 {
+			// If stdin is empty, use default files
+			return getBufferedInputFromFiles(hs_dat.Files)
+		}
 		return &BufferedInput{content: lines}, nil
+	} else if hs_dat.Input_file == "default_files" {
+		return getBufferedInputFromFiles(hs_dat.Files)
 	} else {
-		file, err := os.Open(input_file)
+		file, err := os.Open(hs_dat.Input_file)
 		if err != nil {
 			return nil, err
 		}
 		return bufio.NewReader(file), nil
 	}
+}
+
+func getBufferedInputFromFiles(files []string) (*BufferedInput, error) {
+	var allLines []string
+	for _, file := range files {
+		content, err := os.ReadFile(file)
+		if err != nil {
+			return nil, fmt.Errorf("error reading file %s: %v", file, err)
+		}
+		lines := strings.Split(string(content), "\n")
+		allLines = append(allLines, lines...)
+	}
+	return &BufferedInput{content: allLines}, nil
 }
 
 func WriteLine(line *hsdata.HsLine) {

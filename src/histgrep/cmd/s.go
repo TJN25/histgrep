@@ -4,12 +4,12 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/TJN25/histgrep/hsdata"
 	"github.com/TJN25/histgrep/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"strings"
 )
@@ -48,11 +48,16 @@ func sRun(cmd *cobra.Command, args []string) {
 
 func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Input_file, _ = cmd.Flags().GetString("input")
+	DoConfigFile(data)
 	data.Output_file, _ = cmd.Flags().GetString("output")
 	data.Name, _ = cmd.Flags().GetString("name")
 	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
-	data.NoColor, _ = cmd.Flags().GetBool("no-color")
-	data.UsePager, _ = cmd.Flags().GetBool("pager")
+	if cmd.Flags().Changed("no-color") {
+		data.NoColor, _ = cmd.Flags().GetBool("no-color")
+	}
+	if cmd.Flags().Changed("pager") {
+		data.UsePager, _ = cmd.Flags().GetBool("pager")
+	}
 	data.IncludeNumbers, _ = cmd.Flags().GetBool("numbered")
 	exclude, _ := cmd.Flags().GetString("exclude")
 	if exclude == "SKIPEXCLUDE" {
@@ -284,19 +289,44 @@ func UseDefaults(data *hsdata.HsData) hsdata.FormattingData {
 	return formatMap.Get(defaults.Name)
 }
 
-func SaveHistory(data *hsdata.HsData) {
-	file := utils.GetDataPath("history.json")
-	log.Info(fmt.Sprintf("Saving history to: %v", file))
-	jsonFile, err := os.ReadFile(file)
+func DoConfigFile(data *hsdata.HsData) {
+	file := utils.GetDataPath("histgrep.toml")
+	config, err := utils.LoadConfig(file)
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Cannot find history.json\n%v", err))
+		return
 	}
-	history := hsdata.HistoryArray{}
-	json.Unmarshal(jsonFile, &history)
-	history.Add(*data)
-	log.Info(history)
-	b, _ := json.Marshal(history)
-	os.WriteFile(file, b, os.ModePerm)
+
+	data.CaseSensitive = config.Search.CaseSensitive
+	data.UsePager = config.Display.PagerEnabled
+	data.NoColor = !config.Display.ColorEnabled
+
+	if data.Input_file == "stdin" {
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) != 0 {
+			// Get matching log files
+			logFiles, err := utils.GetMatchingLogFiles(config)
+			if err != nil {
+				fmt.Printf("Error getting log files: %v\n", err)
+				os.Exit(1)
+			}
+			data.Files = logFiles
+			data.Input_file = "default_files"
+		} else {
+			// Read a bit from stdin to check if it's empty
+			buf := make([]byte, 1)
+			_, err := os.Stdin.Read(buf)
+			if err == io.EOF {
+				// Get matching log files
+				logFiles, err := utils.GetMatchingLogFiles(config)
+				if err != nil {
+					fmt.Printf("Error getting log files: %v\n", err)
+					os.Exit(1)
+				}
+				data.Files = logFiles
+				data.Input_file = "default_files"
+			}
+		}
+	}
 }
 
 const PERIOD byte = 46
