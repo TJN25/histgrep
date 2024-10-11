@@ -50,7 +50,17 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 		do_write := true
 		if len(hs_dat.ExcludeTerms) > 0 {
 			for _, term := range hs_dat.ExcludeTerms {
-				if strings.Contains(line, term) {
+				var search_line string
+				var search_term string
+				if !hs_dat.CaseSensitive {
+					search_line = strings.ToLower(line)
+					search_term = strings.ToLower(term)
+				} else {
+					search_line = line
+					search_term = term
+				}
+
+				if strings.Contains(search_line, search_term) {
 					do_write = false
 					break
 				}
@@ -61,7 +71,17 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 				continue
 			}
 			for _, term := range hs_dat.Terms {
-				if strings.Contains(line, term) {
+				var search_line string
+				var search_term string
+				if !hs_dat.CaseSensitive {
+					search_line = strings.ToLower(line)
+					search_term = strings.ToLower(term)
+				} else {
+					search_line = line
+					search_term = term
+				}
+
+				if strings.Contains(search_line, search_term) {
 					current_line.Line = line
 				} else {
 					do_write = false

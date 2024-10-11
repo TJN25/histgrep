@@ -26,7 +26,7 @@ func init() {
 	sCmd.Flags().StringP("input", "i", "stdin", "Input file (leave blank for stdin)")
 	sCmd.Flags().StringP("output", "o", "stdout", "Output file (leave blank for stdout)")
 	sCmd.Flags().StringP("name", "n", "-", "Name of saved format (add with histgrep add-format -n [name] -i [input] -o [output])")
-	sCmd.Flags().BoolP("common-cmds", "c", false, "Keep common commands such as cd, ls and cat")
+	sCmd.Flags().BoolP("case-sensitive", "c", false, "Use case sensitive search")
 	sCmd.Flags().BoolP("no-color", "f", false, "Do not include colors in output")
 	sCmd.Flags().BoolP("pager", "p", false, "Display output in pager (Bubble Tea)")
 	sCmd.Flags().BoolP("numbered", "", false, "Include line numbers in output")
@@ -51,12 +51,14 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	DoConfigFile(data)
 	data.Output_file, _ = cmd.Flags().GetString("output")
 	data.Name, _ = cmd.Flags().GetString("name")
-	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
 	if cmd.Flags().Changed("no-color") {
 		data.NoColor, _ = cmd.Flags().GetBool("no-color")
 	}
 	if cmd.Flags().Changed("pager") {
 		data.UsePager, _ = cmd.Flags().GetBool("pager")
+	}
+	if cmd.Flags().Changed("case-sensitive") {
+		data.CaseSensitive, _ = cmd.Flags().GetBool("case-sensitive")
 	}
 	data.IncludeNumbers, _ = cmd.Flags().GetBool("numbered")
 	exclude, _ := cmd.Flags().GetString("exclude")

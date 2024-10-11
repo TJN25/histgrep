@@ -20,7 +20,6 @@ type HsData struct {
 	ExcludeTerms   []string
 	FormatData     FormattingData
 	Name           string
-	KeepCommonCmds bool
 	NoColor        bool
 	UsePager       bool
 	IncludeNumbers bool
