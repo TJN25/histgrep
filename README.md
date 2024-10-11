@@ -40,10 +40,42 @@ You can redirect the output to a file using the -o flag.
 
 Turn colors off with the `-f` or `--no-color` flag.
 
+## Case Sensitivity
+
+Use case-sensitive search with the `-c` or `--case-sensitive` flag.
+
+## Pager
+
+Enable paging with the `-p` or `--pager` flag.
+
+## Line Numbering
+
+Include line numbers with the `-n` or `--numbered` flag.
+
+## Exclude Terms
+
+Exclude specific terms with the `-x` or `--exclude` flag followed by the terms to exclude in quotes e.g. `-x "exclude_term1 exclude_term2"`.
+
 ## Configuration
 
 Histgrep allows for a wide range of configuration options. When running `histgrep s`, it will search for two configuration files in `$HOME` and `$XDG_CONFIG_HOME`. To use your own custom configuration files, add `HISTGREP_CONFIG_PATH` to your environment.
 Histgrep expects to find `defaults.json` and `formats.json` in the config directory.
+
+Histgrep now supports a `histgrep.toml` file where default flags can be set. It can also be provided with the location of log files to be used as the search files when none are provided (`histgrep s my search terms` will search all files in `~/.logs/` matching the file pattern).
+
+### histgrep.toml
+```
+[default_logs]
+directory = "~/.logs/"
+file_pattern = "{SHELL}-history-{YYYY}-{MM}-{DD}.log"
+
+[search]
+case_sensitive = false
+
+[display]
+color_enabled = true
+pager_enabled = false
+```
 
 ### formats.json
 The `formats.json` file contains a list of search and output formats. Each JSON object
@@ -102,3 +134,15 @@ Provide the name of the format you wish to use as the default. If this is missin
 }
 ```
 
+## New Features
+- Automatic log file selection: If no input file is specified and stdin is empty, HistGrep will automatically use log files matching the pattern specified in the TOML config.
+- Live search in pager mode: When using the pager, you can press / to search or ? to exclude terms. The search updates in real-time as you type.
+- Navigation in pager mode: Use vim-like motions (j, k, g, G) or arrow keys to navigate through the results.
+
+This updated README includes information about:
+1. The new TOML configuration file and its structure
+2. The new command-line flags for case sensitivity, pager mode, and line numbers
+3. The automatic log file selection feature
+4. The live search and navigation features in pager mode
+
+The existing information about installation, basic usage, and the JSON configuration files has been preserved for backwards compatibility.
