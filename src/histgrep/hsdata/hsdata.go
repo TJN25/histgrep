@@ -16,11 +16,13 @@ type HsData struct {
 	Input_file     string
 	Output_file    string
 	Terms          []string
+	ExcludeTerms   []string
 	FormatData     FormattingData
 	Name           string
 	KeepCommonCmds bool
 	NoColor        bool
 	UsePager       bool
+	IncludeNumbers bool
 	Reader         interface{}
 }
 

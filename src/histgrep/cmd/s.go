@@ -29,6 +29,8 @@ func init() {
 	sCmd.Flags().BoolP("common-cmds", "c", false, "Keep common commands such as cd, ls and cat")
 	sCmd.Flags().BoolP("no-color", "f", false, "Do not include colors in output")
 	sCmd.Flags().BoolP("pager", "p", false, "Display output in pager (Bubble Tea)")
+	sCmd.Flags().BoolP("numbered", "", false, "Include line numbers in output")
+	sCmd.Flags().StringP("exclude", "x", "SKIPEXCLUDE", "Exclude specific terms from output")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
 
@@ -51,6 +53,13 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.KeepCommonCmds, _ = cmd.Flags().GetBool("common-cmds")
 	data.NoColor, _ = cmd.Flags().GetBool("no-color")
 	data.UsePager, _ = cmd.Flags().GetBool("pager")
+	data.IncludeNumbers, _ = cmd.Flags().GetBool("numbered")
+	exclude, _ := cmd.Flags().GetString("exclude")
+	if exclude == "SKIPEXCLUDE" {
+		data.ExcludeTerms = []string{}
+	} else {
+		data.ExcludeTerms = strings.Split(exclude, " ")
+	}
 	if data.Name == "-" {
 		data.FormatData = UseDefaults(data)
 		log.Debug(data.FormatData)

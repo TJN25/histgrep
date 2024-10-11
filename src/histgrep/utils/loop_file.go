@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/TJN25/histgrep/hsdata"
@@ -28,6 +29,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 
 	lines_remaining := true
 	match_found := false
+	line_count := 0
 	for lines_remaining {
 		var line string
 		var err error
@@ -46,6 +48,14 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			continue
 		}
 		do_write := true
+		if len(hs_dat.ExcludeTerms) > 0 {
+			for _, term := range hs_dat.ExcludeTerms {
+				if strings.Contains(line, term) {
+					do_write = false
+					break
+				}
+			}
+		}
 		if len(hs_dat.Terms) > 0 {
 			if strings.Contains(line, "histgrep") {
 				continue
@@ -62,11 +72,20 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			current_line.Line = line
 		}
 		if do_write {
+			line_count++
 			match_found = true
 			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
 				words_map := getInputNames(current_line.Line, &hs_dat.FormatData)
 				log.Debug(words_map)
 				current_line.Line = FormatLine(&words_map, &hs_dat.FormatData, hs_dat.NoColor)
+				if hs_dat.IncludeNumbers {
+					number_str := strconv.Itoa(line_count)
+					padding := 4 - len(number_str)
+					if padding > 0 {
+						number_str = strings.Repeat(" ", padding) + number_str
+					}
+					current_line.Line = number_str + "| " + current_line.Line
+				}
 				log.Debug(current_line)
 			}
 			if current_line.Line != "" {

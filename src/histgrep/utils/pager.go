@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/termenv"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -21,12 +22,19 @@ type Model struct {
 	line           hsdata.HsLine
 	searchInput    textinput.Model
 	searchMode     bool
+	searchExcludes bool
+	commandMode    bool
+	commandInput   textinput.Model
 }
 
 func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine) Model {
 	ti := textinput.New()
-	ti.Placeholder = "Enter search terms..."
+	ti.Placeholder = "Enter terms..."
 	ti.CharLimit = 100
+
+	ci := textinput.New()
+	ci.Placeholder = ""
+	ci.CharLimit = 100
 
 	return Model{
 		Content:      content,
@@ -35,6 +43,7 @@ func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine) Mod
 		line:         line,
 		terms:        data.Terms,
 		searchInput:  ti,
+		commandInput: ci,
 	}
 }
 
@@ -48,18 +57,100 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.commandMode {
+			switch msg.Type {
+			case tea.KeyEnter:
+				m.commandMode = false
+				lineNum, err := strconv.Atoi(m.commandInput.Value())
+				if err == nil && lineNum > 0 && lineNum <= len(m.Content) {
+					m.cursor = lineNum - 1
+					if m.cursor > len(m.Content)-m.viewportHeight {
+						m.cursor = len(m.Content) - m.viewportHeight
+					}
+				}
+				m.commandInput.SetValue("")
+				return m, nil
+			case tea.KeyEsc:
+				m.commandMode = false
+				m.commandInput.SetValue("")
+				return m, nil
+			}
+			m.commandInput, cmd = m.commandInput.Update(msg)
+			return m, cmd
+		}
 		if m.searchMode {
 			switch msg.Type {
 			case tea.KeyEnter:
 				m.searchMode = false
-				m.data.Terms = strings.Fields(m.searchInput.Value())
+				terms := strings.Fields(m.searchInput.Value())
+				if m.searchExcludes {
+					m.data.ExcludeTerms = terms
+				} else {
+					m.data.Terms = terms
+				}
 				if bufferedInput, ok := m.data.Reader.(*BufferedInput); ok {
 					bufferedInput.Reset()
 				}
 				m.Content, _ = LoopFile(m.data, SaveLine, m.line)
 				print(m.Content[0])
 				m.cursor = 0
-				m.terms = m.data.Terms
+				return m, tea.Batch(tea.ClearScreen, tea.EnterAltScreen)
+			case tea.KeySpace:
+				terms := strings.Fields(m.searchInput.Value())
+				if m.searchExcludes {
+					m.data.ExcludeTerms = terms
+				} else {
+					m.data.Terms = terms
+				}
+				if bufferedInput, ok := m.data.Reader.(*BufferedInput); ok {
+					bufferedInput.Reset()
+				}
+				m.Content, _ = LoopFile(m.data, SaveLine, m.line)
+				print(m.Content[0])
+				m.cursor = 0
+				terms_string := strings.Join(terms, " ") + " "
+				m.searchInput.SetValue(terms_string)
+				m.searchInput.CursorEnd()
+				return m, tea.Batch(tea.ClearScreen, tea.EnterAltScreen)
+			case tea.KeyBackspace:
+				terms_string := m.searchInput.Value()
+				if len(terms_string) > 1 {
+					if terms_string[len(terms_string)-1] == ' ' {
+						terms := strings.Fields(m.searchInput.Value())
+						if m.searchExcludes {
+							m.data.ExcludeTerms = terms
+						} else {
+							m.data.Terms = terms
+						}
+						if bufferedInput, ok := m.data.Reader.(*BufferedInput); ok {
+							bufferedInput.Reset()
+						}
+						m.Content, _ = LoopFile(m.data, SaveLine, m.line)
+						print(m.Content[0])
+						m.cursor = 0
+
+					}
+					terms_string = terms_string[:len(terms_string)-1]
+					m.searchInput.SetValue(terms_string)
+					m.searchInput.CursorEnd()
+				} else {
+
+					terms := strings.Fields(m.searchInput.Value())
+					if m.searchExcludes {
+						m.data.ExcludeTerms = terms
+					} else {
+						m.data.Terms = terms
+					}
+					if bufferedInput, ok := m.data.Reader.(*BufferedInput); ok {
+						bufferedInput.Reset()
+					}
+					m.Content, _ = LoopFile(m.data, SaveLine, m.line)
+					print(m.Content[0])
+					m.cursor = 0
+					terms_string = ""
+					m.searchInput.SetValue(terms_string)
+					m.searchInput.CursorEnd()
+				}
 				return m, tea.Batch(tea.ClearScreen, tea.EnterAltScreen)
 			case tea.KeyEsc:
 				m.searchMode = false
@@ -93,6 +184,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < 0 {
 				m.cursor = 0
 			}
+		case " ":
+			m.cursor += m.viewportHeight
+			if m.cursor > len(m.Content)-m.viewportHeight {
+				m.cursor = len(m.Content) - m.viewportHeight
+			}
+			if m.cursor < 0 {
+				m.cursor = 0
+			}
 		case "ctrl+d":
 			m.cursor += m.viewportHeight / 2
 			if m.cursor > len(m.Content)-m.viewportHeight {
@@ -103,7 +202,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "/":
 			m.searchMode = true
+			m.searchExcludes = false
+			m.searchInput.SetValue(strings.Join(m.data.Terms, " "))
 			m.searchInput.Focus()
+			m.searchInput.CursorEnd()
+			return m, textinput.Blink
+		case "?":
+			m.searchMode = true
+			m.searchExcludes = true
+			m.searchInput.SetValue(strings.Join(m.data.ExcludeTerms, " "))
+			m.searchInput.Focus()
+			m.searchInput.CursorEnd()
+			return m, textinput.Blink
+		case ":":
+			m.commandMode = true
+			m.commandInput.Focus()
 			return m, textinput.Blink
 		}
 	case tea.WindowSizeMsg:
@@ -136,12 +249,18 @@ func (m Model) View() string {
 	boldStyle := termenv.Style{}.Background(statusBg).Foreground(boldFg).Bold()
 	regularStyle := termenv.Style{}.Background(statusBg).Foreground(boldFg)
 	var statusLine string
-	if m.searchMode {
-		statusLine = boldStyle.Styled("Search: ") + m.searchInput.View()
+	if m.commandMode {
+		statusLine = boldStyle.Styled(":") + m.commandInput.View()
+	} else if m.searchMode {
+		if m.searchExcludes {
+			statusLine = boldStyle.Styled("Exclude: ") + m.searchInput.View()
+		} else {
+			statusLine = boldStyle.Styled("Search: ") + m.searchInput.View()
+		}
 	} else {
 
 		terms := boldStyle.Styled(strings.Join(m.terms, ", "))
-		statusInfo := regularStyle.Styled(fmt.Sprintf(" line %d of %d (use '/' to search or press q to quit)", m.cursor+1, len(m.Content)))
+		statusInfo := regularStyle.Styled(fmt.Sprintf(" line %d of %d | Searching for terms: %s | Excluding terms: %s | (use '/' to search and '?' to exclude or press q to quit)", m.cursor+1, len(m.Content), strings.Join(m.terms, ", "), strings.Join(m.data.ExcludeTerms, ", ")))
 
 		statusLine = statusStyle.Styled(fmt.Sprintf("%s%s", terms, statusInfo))
 	}
