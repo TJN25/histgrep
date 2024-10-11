@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/TJN25/histgrep/hsdata"
 	log "github.com/sirupsen/logrus"
@@ -32,34 +33,32 @@ func CallerName(skip int) string {
 	return f.Name()
 }
 
-func GetDataPath(file string) string {
+func GetDataPath(file string) (string, error) {
 	log.Info(fmt.Sprintf("Checking for %v", file))
 
 	_, err := os.Stat(fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file))
 	if err == nil {
 		log.Debug(fmt.Sprintf("File exists: %v/%v", HISTGREP_CONFIG_PATH, file))
-		return fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file)
+		return fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file), nil
 	} else {
 		log.Warn(fmt.Sprintf("File missing: %v/%v", HISTGREP_CONFIG_PATH, file))
 	}
 
 	_, err = os.Stat(fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file))
 	if err == nil {
-		return fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file)
+		return fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file), nil
 	} else {
 		log.Warn(fmt.Sprintf("File missing: %v/histgrep/%v", XDG_CONFIG_HOME, file))
 	}
 
 	_, err = os.Stat(fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file))
 	if err == nil {
-		return fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file)
+		return fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file), nil
 	} else {
 		log.Warn(fmt.Sprintf("File missing: %v/.histgrep/%v", HOME_PATH, file))
 		fmt.Printf("Searched for %v/%v, %v, and %v/.%v\n", XDG_CONFIG_HOME, file, file, HOME_PATH, file)
-		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
-		os.Exit(1)
+		return "", errors.New("File not found")
 	}
-	return ""
 }
 
 func ErrorExit(msg string) {

@@ -71,7 +71,11 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		data.FormatData = UseDefaults(data)
 		log.Debug(data.FormatData)
 	} else {
-		file := utils.GetDataPath("formats.json")
+		file, err := utils.GetDataPath("formats.json")
+		if err != nil {
+			fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
+			os.Exit(1)
+		}
 		formatMap := hsdata.FormatMap{}
 		utils.FetchFormatting(file, &formatMap)
 		format_data, ok := formatMap[data.Name]
@@ -280,8 +284,16 @@ func SkipSeperators(separator string) (string, int, int) {
 }
 
 func UseDefaults(data *hsdata.HsData) hsdata.FormattingData {
-	file := utils.GetDataPath("defaults.json")
-	config_file := utils.GetDataPath("formats.json")
+	file, err := utils.GetDataPath("defaults.json")
+	if err != nil {
+		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
+		os.Exit(1)
+	}
+	config_file, err := utils.GetDataPath("formats.json")
+	if err != nil {
+		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
+		os.Exit(1)
+	}
 	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
 	formatMap := hsdata.FormatMap{}
@@ -292,7 +304,10 @@ func UseDefaults(data *hsdata.HsData) hsdata.FormattingData {
 }
 
 func DoConfigFile(data *hsdata.HsData) {
-	file := utils.GetDataPath("histgrep.toml")
+	file, err := utils.GetDataPath("histgrep.toml")
+	if err != nil {
+		return
+	}
 	config, err := utils.LoadConfig(file)
 	if err != nil {
 		return
