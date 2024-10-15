@@ -4,10 +4,13 @@ Copyright © 2024 dani
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+const VERSION = "0.2.0"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -16,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Long:  `HistGrep is a terminal-based command-line tool for searching through history files or other logs.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: rootRun,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -37,5 +40,16 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolP("version", "V", false, "Print version information")
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		versionFlag, _ := cmd.Flags().GetBool("version")
+		if versionFlag {
+			fmt.Printf("HistGrep version %s\n", VERSION)
+			os.Exit(0)
+		}
+	}
+
+}
+
+func rootRun(cmd *cobra.Command, args []string) {
 }
