@@ -39,15 +39,18 @@ func sRun(cmd *cobra.Command, args []string) {
 	data := hsdata.HsData{Terms: args}
 	verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
 	utils.SetVerbosity(verbosity)
-	sGetArgs(cmd, &data)
+	config := sGetArgs(cmd, &data)
+	fmt.Printf("Config: directory: %v, file_pattern: %v\n", config.DefaultLogs.Directory, config.DefaultLogs.FilePattern)
+	fmt.Printf("Config: case_sensitive: %v, default_name: %v\n", config.Search.CaseSensitive, config.Search.DefaultName)
+	fmt.Printf("Config: color_enabled: %v, pager_enabled: %v, vim_exit: %v\n", config.Display.ColorEnabled, config.Display.PagerEnabled, config.Display.VimExit)
 	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
 	DoFormatting(&data)
-	RunLoopFile(&data)
+	RunLoopFile(&data, config)
 	// SaveHistory(&data)
 }
 
-func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
+func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 	data.Input_file, _ = cmd.Flags().GetString("input")
 	config := DoConfigFile(data)
 	data.Output_file, _ = cmd.Flags().GetString("output")
@@ -89,6 +92,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		log.Debug(formatMap)
 	}
 	log.Info(fmt.Sprintf("Args data: %v", data))
+	return config
 }
 
 /*
@@ -238,7 +242,7 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
 	log.Debug("GetFormatPos: Finished.")
 }
 
-func RunLoopFile(data *hsdata.HsData) {
+func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
 	var err error
 	line := hsdata.HsLine{}
 	if data.UsePager {
@@ -246,7 +250,7 @@ func RunLoopFile(data *hsdata.HsData) {
 		if err != nil {
 			log.Panic(err)
 		}
-		utils.ViewFileWithPager(formatted_lines, data, line)
+		utils.ViewFileWithPager(formatted_lines, data, line, config)
 	} else if data.Output_file == "stdout" {
 		_, err = utils.LoopFile(data, utils.PrintLine, line)
 	} else {

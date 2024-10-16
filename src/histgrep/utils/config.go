@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
+
+	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	Display struct {
 		ColorEnabled bool `toml:"color_enabled"`
 		PagerEnabled bool `toml:"pager_enabled"`
+		VimExit      bool `toml:"vim_exit"`
 	} `toml:"display"`
 }
 
@@ -40,9 +42,11 @@ func LoadConfig(path string) (*Config, error) {
 		Display: struct {
 			ColorEnabled bool `toml:"color_enabled"`
 			PagerEnabled bool `toml:"pager_enabled"`
+			VimExit      bool `toml:"vim_exit"`
 		}{
 			ColorEnabled: true,
 			PagerEnabled: false,
+			VimExit:      false,
 		},
 	}
 
@@ -58,7 +62,6 @@ func LoadConfig(path string) (*Config, error) {
 		}
 		config.DefaultLogs.Directory = filepath.Join(home, config.DefaultLogs.Directory[2:])
 	}
-
 	return config, nil
 }
 

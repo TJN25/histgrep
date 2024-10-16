@@ -25,9 +25,10 @@ type Model struct {
 	searchExcludes bool
 	commandMode    bool
 	commandInput   textinput.Model
+	VimExit        bool
 }
 
-func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine) Model {
+func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine, config *Config) Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter terms..."
 	ti.CharLimit = 500
@@ -44,6 +45,7 @@ func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine) Mod
 		terms:        data.Terms,
 		searchInput:  ti,
 		commandInput: ci,
+		VimExit:      config.Display.VimExit,
 	}
 }
 
@@ -60,6 +62,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.commandMode {
 			switch msg.Type {
 			case tea.KeyEnter:
+				if m.commandInput.Value() == "q" {
+					return m, tea.Quit
+				}
+
 				m.commandMode = false
 				lineNum, err := strconv.Atoi(m.commandInput.Value())
 				if err == nil && lineNum > 0 && lineNum <= len(m.Content) {
@@ -162,7 +168,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch msg.String() {
-		case "q", "ctrl+c":
+		case "q":
+			if !m.VimExit {
+				return m, tea.Quit
+			}
+		case "ctrl+c":
 			return m, tea.Quit
 		case "up", "k":
 			if m.cursor > 0 {
@@ -279,8 +289,8 @@ func (m Model) View() string {
 	return content + "\n" + statusLine
 }
 
-func ViewFileWithPager(content []string, data *hsdata.HsData, line hsdata.HsLine) {
-	model := initialModel(content, data, line)
+func ViewFileWithPager(content []string, data *hsdata.HsData, line hsdata.HsLine, config *Config) {
+	model := initialModel(content, data, line, config)
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running program: %v\n", err)
