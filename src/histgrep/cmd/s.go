@@ -5,13 +5,14 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/TJN25/histgrep/hsdata"
 	"github.com/TJN25/histgrep/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
-	"strings"
 )
 
 var sCmd = &cobra.Command{
@@ -48,7 +49,7 @@ func sRun(cmd *cobra.Command, args []string) {
 
 func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 	data.Input_file, _ = cmd.Flags().GetString("input")
-	DoConfigFile(data)
+	config := DoConfigFile(data)
 	data.Output_file, _ = cmd.Flags().GetString("output")
 	data.Name, _ = cmd.Flags().GetString("name")
 	if cmd.Flags().Changed("no-color") {
@@ -68,7 +69,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		data.ExcludeTerms = strings.Split(exclude, " ")
 	}
 	if data.Name == "-" {
-		data.FormatData = UseDefaults(data)
+		data.FormatData = UseDefaults(data, config)
 		log.Debug(data.FormatData)
 	} else {
 		file, err := utils.GetDataPath("formats.json")
@@ -283,34 +284,27 @@ func SkipSeperators(separator string) (string, int, int) {
 	return current_separator, skip_by, skip_dir
 }
 
-func UseDefaults(data *hsdata.HsData) hsdata.FormattingData {
-	file, err := utils.GetDataPath("defaults.json")
-	if err != nil {
-		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
-		os.Exit(1)
-	}
+func UseDefaults(data *hsdata.HsData, config *utils.Config) hsdata.FormattingData {
 	config_file, err := utils.GetDataPath("formats.json")
 	if err != nil {
 		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
 		os.Exit(1)
 	}
-	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
 	formatMap := hsdata.FormatMap{}
-	defaults := hsdata.DefaultsData{}
 	utils.FetchFormatting(config_file, &formatMap)
-	utils.FetchDefaults(file, &defaults)
-	return formatMap.Get(defaults.Name)
+	return formatMap.Get(config.Search.DefaultName) // This can fail and I should return an error instead.
 }
 
-func DoConfigFile(data *hsdata.HsData) {
+func DoConfigFile(data *hsdata.HsData) *utils.Config {
+	var config *utils.Config
 	file, err := utils.GetDataPath("histgrep.toml")
 	if err != nil {
-		return
+		return config
 	}
-	config, err := utils.LoadConfig(file)
+	config, err = utils.LoadConfig(file)
 	if err != nil {
-		return
+		return config
 	}
 
 	data.CaseSensitive = config.Search.CaseSensitive
@@ -344,6 +338,7 @@ func DoConfigFile(data *hsdata.HsData) {
 			}
 		}
 	}
+	return config
 }
 
 const PERIOD byte = 46

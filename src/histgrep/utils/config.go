@@ -12,7 +12,8 @@ type Config struct {
 		FilePattern string `toml:"file_pattern"`
 	} `toml:"default_logs"`
 	Search struct {
-		CaseSensitive bool `toml:"case_sensitive"`
+		CaseSensitive bool   `toml:"case_sensitive"`
+		DefaultName   string `toml:"default_name"`
 	} `toml:"search"`
 	Display struct {
 		ColorEnabled bool `toml:"color_enabled"`
@@ -30,9 +31,11 @@ func LoadConfig(path string) (*Config, error) {
 			FilePattern: "EMPTY",
 		},
 		Search: struct {
-			CaseSensitive bool `toml:"case_sensitive"`
+			CaseSensitive bool   `toml:"case_sensitive"`
+			DefaultName   string `toml:"default_name"`
 		}{
 			CaseSensitive: false,
+			DefaultName:   "EMPTY",
 		},
 		Display: struct {
 			ColorEnabled bool `toml:"color_enabled"`
