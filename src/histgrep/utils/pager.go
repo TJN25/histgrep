@@ -32,10 +32,12 @@ func initialModel(content []string, data *hsdata.HsData, line hsdata.HsLine, con
 	ti := textinput.New()
 	ti.Placeholder = "Enter terms..."
 	ti.CharLimit = 500
+	ti.Prompt = ">"
 
 	ci := textinput.New()
 	ci.Placeholder = ""
 	ci.CharLimit = 500
+	ci.Prompt = ":"
 
 	return Model{
 		Content:      content,
@@ -260,7 +262,7 @@ func (m Model) View() string {
 	regularStyle := termenv.Style{}.Background(statusBg).Foreground(boldFg)
 	var statusLine string
 	if m.commandMode {
-		statusLine = boldStyle.Styled(":") + m.commandInput.View()
+		statusLine = m.commandInput.View()
 	} else if m.searchMode {
 		if m.searchExcludes {
 			statusLine = boldStyle.Styled("Exclude: ") + m.searchInput.View()

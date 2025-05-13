@@ -5,12 +5,15 @@ package cmd
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"os"
 
+	"github.com/TJN25/histgrep/hsdata"
+	"github.com/TJN25/histgrep/utils"
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "0.2.0"
+const VERSION = "0.2.1"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -52,4 +55,25 @@ func init() {
 }
 
 func rootRun(cmd *cobra.Command, args []string) {
+	data := hsdata.HsData{Terms: []string{}}
+	verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
+	utils.SetVerbosity(verbosity)
+	config := rootGetArgs(&data)
+	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
+	log.Debug(fmt.Sprintf("Formatting input: %v", data))
+	DoFormatting(&data)
+	RunLoopFile(&data, config)
+}
+
+func rootGetArgs(data *hsdata.HsData) *utils.Config {
+	data.Input_file = "stdin"
+	config := DoConfigFile(data)
+	data.Output_file = "stdout"
+	data.IncludeNumbers = false
+	data.ExcludeTerms = []string{}
+	data.UsePager = true
+	data.FormatData = UseDefaults(data, config)
+	log.Debug(data.FormatData)
+	log.Info(fmt.Sprintf("Args data: %v", data))
+	return config
 }
