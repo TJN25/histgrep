@@ -25,32 +25,30 @@ go build
 Run with `histgrep s -i input_file.txt foo bar baz` or `cat input_file.txt | histgrep s foo bar baz`.
 You can redirect the output to a file using the -o flag.
 
-## Colors
+## Options
 
+**Colors**
 Turn colors off with the `-f` or `--no-color` flag.
 
-## Case Sensitivity
-
+**Case Sensitivity**
 Use case-sensitive search with the `-c` or `--case-sensitive` flag.
 
-## Pager
-
+**Pager**
 Enable paging with the `-p` or `--pager` flag.
 
-## Line Numbering
-
+**Line Numbering**
 Include line numbers with the `-n` or `--numbered` flag.
 
-## Exclude Terms
-
+**Exclude Terms**
 Exclude specific terms with the `-x` or `--exclude` flag followed by the terms to exclude in quotes e.g. `-x "exclude_term1 exclude_term2"`.
 
 ## Configuration
 
 Histgrep allows for a wide range of configuration options. When running `histgrep s`, it will search for two configuration files in `$HOME` and `$XDG_CONFIG_HOME`. To use your own custom configuration files, add `HISTGREP_CONFIG_PATH` to your environment.
-Histgrep expects to find `defaults.json` and `formats.json` in the config directory.
+Histgrep expects to find `histgrep.toml` and `formats.json` in the config directory.
 
 Histgrep now supports a `histgrep.toml` file where default flags can be set. It can also be provided with the location of log files to be used as the search files when none are provided (`histgrep s my search terms` will search all files in `~/.logs/` matching the file pattern).
+These changes consolidate the configuration into a single TOML file, making it easier for users to manage their settings. The `defaults.json` file can be removed, and users should be instructed to update their configurations accordingly when upgrading to this new version.
 
 ### histgrep.toml
 ```
@@ -113,14 +111,6 @@ Excludes:
 
 ###
 
-```
-
-### defaults.json
-Provide the name of the format you wish to use as the default. If this is missing, no formatting will be applied.
-```
-{
- "Name": "simple"
-}
 ```
 
 ## New Features

@@ -5,13 +5,14 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
+
 	"github.com/TJN25/histgrep/hsdata"
 	"github.com/TJN25/histgrep/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io"
-	"os"
-	"strings"
 )
 
 var sCmd = &cobra.Command{
@@ -38,17 +39,17 @@ func sRun(cmd *cobra.Command, args []string) {
 	data := hsdata.HsData{Terms: args}
 	verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
 	utils.SetVerbosity(verbosity)
-	sGetArgs(cmd, &data)
+	config := sGetArgs(cmd, &data)
 	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
 	DoFormatting(&data)
-	RunLoopFile(&data)
+	RunLoopFile(&data, config)
 	// SaveHistory(&data)
 }
 
-func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
+func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 	data.Input_file, _ = cmd.Flags().GetString("input")
-	DoConfigFile(data)
+	config := DoConfigFile(data)
 	data.Output_file, _ = cmd.Flags().GetString("output")
 	data.Name, _ = cmd.Flags().GetString("name")
 	if cmd.Flags().Changed("no-color") {
@@ -68,7 +69,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		data.ExcludeTerms = strings.Split(exclude, " ")
 	}
 	if data.Name == "-" {
-		data.FormatData = UseDefaults(data)
+		data.FormatData = UseDefaults(data, config)
 		log.Debug(data.FormatData)
 	} else {
 		file, err := utils.GetDataPath("formats.json")
@@ -88,6 +89,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) {
 		log.Debug(formatMap)
 	}
 	log.Info(fmt.Sprintf("Args data: %v", data))
+	return config
 }
 
 /*
@@ -237,7 +239,7 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
 	log.Debug("GetFormatPos: Finished.")
 }
 
-func RunLoopFile(data *hsdata.HsData) {
+func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
 	var err error
 	line := hsdata.HsLine{}
 	if data.UsePager {
@@ -245,7 +247,7 @@ func RunLoopFile(data *hsdata.HsData) {
 		if err != nil {
 			log.Panic(err)
 		}
-		utils.ViewFileWithPager(formatted_lines, data, line)
+		utils.ViewFileWithPager(formatted_lines, data, line, config)
 	} else if data.Output_file == "stdout" {
 		_, err = utils.LoopFile(data, utils.PrintLine, line)
 	} else {
@@ -283,34 +285,27 @@ func SkipSeperators(separator string) (string, int, int) {
 	return current_separator, skip_by, skip_dir
 }
 
-func UseDefaults(data *hsdata.HsData) hsdata.FormattingData {
-	file, err := utils.GetDataPath("defaults.json")
-	if err != nil {
-		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
-		os.Exit(1)
-	}
+func UseDefaults(data *hsdata.HsData, config *utils.Config) hsdata.FormattingData {
 	config_file, err := utils.GetDataPath("formats.json")
 	if err != nil {
 		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
 		os.Exit(1)
 	}
-	log.Info(fmt.Sprintf("Using defaults file %v", file))
 	log.Info(fmt.Sprintf("Using config file %v", config_file))
 	formatMap := hsdata.FormatMap{}
-	defaults := hsdata.DefaultsData{}
 	utils.FetchFormatting(config_file, &formatMap)
-	utils.FetchDefaults(file, &defaults)
-	return formatMap.Get(defaults.Name)
+	return formatMap.Get(config.Search.DefaultName) // This can fail and I should return an error instead.
 }
 
-func DoConfigFile(data *hsdata.HsData) {
+func DoConfigFile(data *hsdata.HsData) *utils.Config {
+	var config *utils.Config
 	file, err := utils.GetDataPath("histgrep.toml")
 	if err != nil {
-		return
+		return config
 	}
-	config, err := utils.LoadConfig(file)
+	config, err = utils.LoadConfig(file)
 	if err != nil {
-		return
+		return config
 	}
 
 	data.CaseSensitive = config.Search.CaseSensitive
@@ -344,6 +339,7 @@ func DoConfigFile(data *hsdata.HsData) {
 			}
 		}
 	}
+	return config
 }
 
 const PERIOD byte = 46

@@ -117,7 +117,6 @@ func DoDefaults(data *hsdata.InfoData) {
 	formatMap := hsdata.FormatMap{}
 	defaults := hsdata.DefaultsData{}
 	utils.FetchFormatting(config_file, &formatMap)
-	utils.FetchDefaults(file, &defaults)
 	defaultsConfig := formatMap.Get(defaults.Name)
 
 	PrintDefaults(defaultsConfig, defaults.Name, data.Names_only)

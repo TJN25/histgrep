@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"github.com/BurntSushi/toml"
 	"os"
 	"path/filepath"
+
+	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
@@ -12,11 +13,13 @@ type Config struct {
 		FilePattern string `toml:"file_pattern"`
 	} `toml:"default_logs"`
 	Search struct {
-		CaseSensitive bool `toml:"case_sensitive"`
+		CaseSensitive bool   `toml:"case_sensitive"`
+		DefaultName   string `toml:"default_name"`
 	} `toml:"search"`
 	Display struct {
 		ColorEnabled bool `toml:"color_enabled"`
 		PagerEnabled bool `toml:"pager_enabled"`
+		VimExit      bool `toml:"vim_exit"`
 	} `toml:"display"`
 }
 
@@ -30,16 +33,20 @@ func LoadConfig(path string) (*Config, error) {
 			FilePattern: "EMPTY",
 		},
 		Search: struct {
-			CaseSensitive bool `toml:"case_sensitive"`
+			CaseSensitive bool   `toml:"case_sensitive"`
+			DefaultName   string `toml:"default_name"`
 		}{
 			CaseSensitive: false,
+			DefaultName:   "EMPTY",
 		},
 		Display: struct {
 			ColorEnabled bool `toml:"color_enabled"`
 			PagerEnabled bool `toml:"pager_enabled"`
+			VimExit      bool `toml:"vim_exit"`
 		}{
 			ColorEnabled: true,
 			PagerEnabled: false,
+			VimExit:      false,
 		},
 	}
 
@@ -55,7 +62,6 @@ func LoadConfig(path string) (*Config, error) {
 		}
 		config.DefaultLogs.Directory = filepath.Join(home, config.DefaultLogs.Directory[2:])
 	}
-
 	return config, nil
 }
 

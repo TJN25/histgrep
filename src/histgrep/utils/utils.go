@@ -76,15 +76,6 @@ func FetchFormatting(file string, fm *hsdata.FormatMap) {
 	log.Info(fmt.Sprintf("FetchFormatting: %v, from %v", fm, file))
 }
 
-func FetchDefaults(file string, df *hsdata.DefaultsData) {
-	jsonFile, err := os.ReadFile(file)
-	if err != nil {
-		ErrorExit(fmt.Sprintf("Cannot find %v\n%v", file, err))
-	}
-	json.Unmarshal(jsonFile, df)
-	log.Info(fmt.Sprintf("FetchDefaults: %v, from %v", df, file))
-}
-
 func SetVerbosity(verbosity int) {
 
 	log.SetFormatter(&log.TextFormatter{
