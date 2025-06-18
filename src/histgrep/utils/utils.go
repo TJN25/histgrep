@@ -2,10 +2,11 @@ package utils
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"path/filepath"
+
 	"github.com/TJN25/histgrep/hsdata"
-	log "github.com/sirupsen/logrus"
+
 	"os"
 	"runtime"
 )
@@ -34,35 +35,32 @@ func CallerName(skip int) string {
 }
 
 func GetDataPath(file string) (string, error) {
-	log.Info(fmt.Sprintf("Checking for %v", file))
-
-	_, err := os.Stat(fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file))
-	if err == nil {
-		log.Debug(fmt.Sprintf("File exists: %v/%v", HISTGREP_CONFIG_PATH, file))
-		return fmt.Sprintf("%v/%v", HISTGREP_CONFIG_PATH, file), nil
-	} else {
-		log.Warn(fmt.Sprintf("File missing: %v/%v", HISTGREP_CONFIG_PATH, file))
+	Log.Debugf("Checking for %v\n", file)
+	searchPaths := []string{
+		filepath.Join(HISTGREP_CONFIG_PATH, file),
+		filepath.Join(XDG_CONFIG_HOME, "histgrep", file),
+		filepath.Join(HOME_PATH, ".histgrep", file),
 	}
 
-	_, err = os.Stat(fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file))
-	if err == nil {
-		return fmt.Sprintf("%v/histgrep/%v", XDG_CONFIG_HOME, file), nil
-	} else {
-		log.Warn(fmt.Sprintf("File missing: %v/histgrep/%v", XDG_CONFIG_HOME, file))
+	for i, path := range searchPaths {
+		Log.Debugf("Checking path %d: %s\n", i+1, path)
+
+		if _, err := os.Stat(path); err == nil {
+			Log.Infof("Found config file: %s\n", path)
+			return path, nil
+		}
 	}
 
-	_, err = os.Stat(fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file))
-	if err == nil {
-		return fmt.Sprintf("%v/.histgrep/%v", HOME_PATH, file), nil
-	} else {
-		log.Warn(fmt.Sprintf("File missing: %v/.histgrep/%v", HOME_PATH, file))
-		fmt.Printf("Searched for %v/%v, %v, and %v/.%v\n", XDG_CONFIG_HOME, file, file, HOME_PATH, file)
-		return "", errors.New("File not found")
+	Log.Errorf("Config file '%s' not found in any of these locations:\n", file)
+	for i, path := range searchPaths {
+		Log.Errorf("  %d. %s\n", i+1, path)
 	}
+
+	return "", fmt.Errorf("config file '%s' not found", file)
 }
 
 func ErrorExit(msg string) {
-	log.Error(msg)
+	Log.Error(msg)
 	fmt.Fprintln(os.Stderr, "exiting")
 	os.Exit(1)
 }
@@ -73,27 +71,28 @@ func FetchFormatting(file string, fm *hsdata.FormatMap) {
 		ErrorExit(fmt.Sprintf("Cannot find %v\n%v", file, err))
 	}
 	json.Unmarshal(jsonFile, fm)
-	log.Info(fmt.Sprintf("FetchFormatting: %v, from %v", fm, file))
+	Log.Infof("FetchFormatting: %v, from %v\n", fm, file)
 }
 
 func SetVerbosity(verbosity int) {
 
-	log.SetFormatter(&log.TextFormatter{
-		FullTimestamp: true,
-	})
-
-	switch verbosity {
-	case 0:
-		log.SetLevel(log.ErrorLevel)
-	case 1:
-		log.SetLevel(log.WarnLevel)
-	case 2:
-		log.SetLevel(log.InfoLevel)
-	case 3:
-		log.SetLevel(log.DebugLevel)
-	case 4:
-		log.SetLevel(log.TraceLevel)
-	default:
-		log.SetLevel(log.TraceLevel)
-	}
+	InitializeLogger(verbosity)
+	// log.SetFormatter(&log.TextFormatter{
+	// 	FullTimestamp: true,
+	// })
+	//
+	// switch verbosity {
+	// case 0:
+	// 	log.SetLevel(log.ErrorLevel)
+	// case 1:
+	// 	log.SetLevel(log.WarnLevel)
+	// case 2:
+	// 	log.SetLevel(log.InfoLevel)
+	// case 3:
+	// 	log.SetLevel(log.DebugLevel)
+	// case 4:
+	// 	log.SetLevel(log.TraceLevel)
+	// default:
+	// 	log.SetLevel(log.TraceLevel)
+	// }
 }

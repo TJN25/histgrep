@@ -9,20 +9,19 @@ import (
 	"strings"
 
 	"github.com/TJN25/histgrep/hsdata"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 )
 
 func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) ([]string, error) {
-	log.Info(fmt.Sprintf("%v: Loop file: %v", CallerName(0), hs_dat))
-	log.Info(fmt.Sprintf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes))
-	fmt.Println("")
+	Log.Tracef("%v: Loop file: %v\n", CallerName(0), hs_dat)
+	Log.Debugf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes)
 	_, ok := hs_dat.Reader.(*BufferedInput)
 	if !ok {
 		var err error
 		hs_dat.Reader, err = GetScanner(hs_dat)
 		if err != nil {
 			var formatted_lines []string
-			fmt.Fprintln(os.Stderr, "Scanner error", err)
+			Log.Fprintf(os.Stderr, "Scanner error: %v\n", err)
 			return formatted_lines, err
 		}
 	}
@@ -44,7 +43,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			if err == io.EOF {
 				break
 			}
-			fmt.Printf("Read: %s, error: %v\n", line, err)
+			Log.Printf("Read: %s, error: %v\n", line, err)
 			continue
 		}
 		do_write := true
@@ -96,7 +95,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			match_found = true
 			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
 				words_map := getInputNames(current_line.Line, &hs_dat.FormatData)
-				log.Debug(words_map)
+				Log.Tracef("%+v\n", words_map)
 				current_line.Line = FormatLine(&words_map, &hs_dat.FormatData, hs_dat.NoColor)
 				if hs_dat.IncludeNumbers {
 					number_str := strconv.Itoa(line_count)
@@ -106,7 +105,7 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 					}
 					current_line.Line = number_str + "| " + current_line.Line
 				}
-				log.Debug(current_line)
+				Log.Debugf("%s\n", current_line)
 			}
 			if current_line.Line != "" {
 				write_fn(&current_line)
@@ -161,13 +160,13 @@ func getBufferedInputFromFiles(files []string) (*BufferedInput, error) {
 func WriteLine(line *hsdata.HsLine) {
 	_, err := line.F.WriteString(line.Line + "\n")
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		Log.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
 
 func PrintLine(line *hsdata.HsLine) {
-	fmt.Fprintf(os.Stdout, "%s\n", line.Line)
+	Log.Fprintf(os.Stdout, "%s\n", line.Line)
 }
 
 func SaveLine(line *hsdata.HsLine) {
@@ -181,7 +180,7 @@ func FormatLine(terms *MapFormat, format_data *hsdata.FormattingData, no_color b
 	f_separators := (*format_data).Output["separators"]
 	f_colors := format_data.Color
 	f_excludes := (*format_data).Excludes
-	log.Debug(fmt.Sprintf("Terms: %v, Names: %v, Separators: %v", terms, f_keys, f_separators))
+	Log.Debugf("Terms: %v, Names: %v, Separators: %v\n", terms, f_keys, f_separators)
 	var line string = ""
 	sep_len := len(f_separators)
 	for i, term := range f_keys {
@@ -270,7 +269,7 @@ func InsertColor(color string) string {
 }
 
 func getInputNames(line string, format_data *hsdata.FormattingData) MapFormat {
-	log.Debug(fmt.Sprintf("%v: Line: %v, Keys: %v, Separators: %v", CallerName(0), line, (*format_data).Input["keys"], (*format_data).Input["separators"]))
+	Log.Debugf("%v: Line: %v, Keys: %v, Separators: %v\n", CallerName(0), line, (*format_data).Input["keys"], (*format_data).Input["separators"])
 	keys := (*format_data).Input["keys"]
 	separators := (*format_data).Input["separators"]
 	var words = make(MapFormat)
@@ -289,13 +288,13 @@ func getInputNames(line string, format_data *hsdata.FormattingData) MapFormat {
 		default:
 			separator_name = separator
 		}
-		log.Debug(fmt.Sprintf("Idx: %v, Separator: %v", i, separator_name))
+		Log.Debugf("Idx: %v, Separator: %v\n", i, separator_name)
 		curr = strings.SplitN(remainder, separator, 2)
-		log.Debug(fmt.Sprintf("Length %v", len(curr)))
+		Log.Debugf("Length %v\n", len(curr))
 		if len(curr) > 1 {
-			log.Debug(fmt.Sprintf("Name: %v, Remainder: %v", curr[0], curr[1]))
+			Log.Debugf("Name: %v, Remainder: %v\n", curr[0], curr[1])
 		} else {
-			log.Debug(fmt.Sprintf("Name: %v, Remainder: N/A", curr[0]))
+			Log.Debugf("Name: %v, Remainder: N/A\n", curr[0])
 		}
 		if separator == "" {
 			continue
