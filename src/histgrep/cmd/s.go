@@ -94,12 +94,9 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 
 /*
 TODO: Process the current separator, skip_by, and skip_dir in some way that
-TODO: makes sense and allows the later functions to work with the new format.
-TODO: Update the other functions to use this format.
-*/
-
-/*
-TODO: add a feature that allows each search term to have a set of exclude terms.
+makes sense and allows the later functions to work with the new format.
+Update the other functions to use this format.
+add a feature that allows each search term to have a set of exclude terms.
 */
 
 func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
