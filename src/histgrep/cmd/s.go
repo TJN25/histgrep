@@ -1,4 +1,5 @@
 /*
+s.g
 Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 */
 package cmd
@@ -11,7 +12,7 @@ import (
 
 	"github.com/TJN25/histgrep/hsdata"
 	"github.com/TJN25/histgrep/utils"
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -40,8 +41,19 @@ func sRun(cmd *cobra.Command, args []string) {
 	verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
 	utils.SetVerbosity(verbosity)
 	config := sGetArgs(cmd, &data)
-	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
-	log.Debug(fmt.Sprintf("Formatting input: %v", data))
+	utils.Log.Infof("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData)
+	utils.Log.Tracef("Formatting input: %+v\n", data)
+	utils.Log.Debugf("HsData.Input_file: %s\n", data.Input_file)
+	utils.Log.Debugf("HsData.Files: %d files\n", len(data.Files))
+	utils.Log.Debugf("HsData.Output_file: %s\n", data.Output_file)
+	utils.Log.Debugf("HsData.Terms: %v\n", data.Terms)
+	utils.Log.Debugf("HsData.ExcludeTerms: %v\n", data.ExcludeTerms)
+	utils.Log.Debugf("HsData.FormatData: %+v\n", data.FormatData)
+	utils.Log.Debugf("HsData.Name: %s\n", data.Name)
+	utils.Log.Debugf("HsData.NoColor: %t\n", data.NoColor)
+	utils.Log.Debugf("HsData.UsePager: %t\n", data.UsePager)
+	utils.Log.Debugf("HsData.IncludeNumbers: %t\n", data.IncludeNumbers)
+	utils.Log.Debugf("HsData.CaseSensitive: %t\n", data.CaseSensitive)
 	DoFormatting(&data)
 	RunLoopFile(&data, config)
 	// SaveHistory(&data)
@@ -70,11 +82,11 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 	}
 	if data.Name == "-" {
 		data.FormatData = UseDefaults(data, config)
-		log.Debug(data.FormatData)
+		utils.Log.Debugf("%+v\n", data.FormatData)
 	} else {
 		file, err := utils.GetDataPath("formats.json")
 		if err != nil {
-			fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
+			utils.Log.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
 			os.Exit(1)
 		}
 		formatMap := hsdata.FormatMap{}
@@ -86,9 +98,9 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 			utils.ErrorExit(fmt.Sprintf("Format not found: %v", data.Name))
 		}
 		data.FormatData = formatMap[data.Name]
-		log.Debug(formatMap)
+		utils.Log.Tracef("%+v\n", formatMap)
 	}
-	log.Info(fmt.Sprintf("Args data: %v", data))
+	utils.Log.Tracef("Args data: %+v\n", data)
 	return config
 }
 
@@ -105,12 +117,12 @@ func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
 }
 
 func GetFormat(curr string, names *[]string, separators *[]string, positions *[]hsdata.FormatPosition) {
-	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), curr))
+	utils.Log.Tracef("%v: %v\n", utils.CallerName(0), curr)
 	words := strings.Split(curr, "}")
 	var name_sep []string
 	for _, word := range words {
 		pos := hsdata.FormatPosition{}
-		log.Debug(fmt.Sprintf("Word: %v", word))
+		utils.Log.Debugf("Word: %v\n", word)
 		name_sep = strings.Split(word, "{")
 		if strings.Contains(name_sep[0], "...") {
 			MultiplePositions(&name_sep)
@@ -124,24 +136,24 @@ func GetFormat(curr string, names *[]string, separators *[]string, positions *[]
 		}
 		*positions = append(*positions, pos)
 	}
-	log.Debug("GetFormat: Finished.")
+	utils.Log.Debugln("GetFormat: Finished.")
 }
 
 func MultiplePositions(name_sep *[]string) {
 	current_separator, skip_by, skip_dir := SkipSeperators((*name_sep)[0])
-	fmt.Printf("current_separator: %v skip_by: %v skip_dir: %v\n", current_separator, skip_by, skip_dir)
-	fmt.Printf("New formatting used - name: %v\n", name_sep)
+	utils.Log.Printf("current_separator: %v skip_by: %v skip_dir: %v\n", current_separator, skip_by, skip_dir)
+	utils.Log.Printf("New formatting used - name: %v\n", name_sep)
 	os.Exit(0)
 }
 
 func NameAndSeparator(name_sep []string, pos *hsdata.FormatPosition) (string, string) {
 	var separator, name string
 	if len(name_sep) < 2 {
-		log.Debug(fmt.Sprintf("Short section - Name: N/A, Separator: %v", name_sep[0]))
+		utils.Log.Debugf("Short section - Name: N/A, Separator: %v\n", name_sep[0])
 		separator = name_sep[0]
 		pos.Separator = name_sep[0]
 	} else {
-		log.Debug(fmt.Sprintf("Name: %v, Separator: %v", name_sep[1], name_sep[0]))
+		utils.Log.Debugf("Name: %v, Separator: %v\n", name_sep[1], name_sep[0])
 		if name_sep[0] == "" {
 			name = GetName(name_sep[1], pos)
 			return name, ""
@@ -156,12 +168,12 @@ func NameAndSeparator(name_sep []string, pos *hsdata.FormatPosition) (string, st
 func GetName(name string, pos *hsdata.FormatPosition) string {
 	if strings.Contains(name, ":") {
 		names := strings.Split(name, ":")
-		log.Debug(fmt.Sprintf("Name and color: %v", names))
+		utils.Log.Debugf("Name and color: %v\n", names)
 		name = names[0]
 		pos.Name = name
 		pos.Color, pos.ColorMap = GetColor(names[1])
 	} else {
-		log.Debug(fmt.Sprintf("Name: %v", name))
+		utils.Log.Debugf("Name: %v\n", name)
 		pos.Name = name
 		pos.Color, pos.ColorMap = GetColor("none")
 	}
@@ -195,12 +207,12 @@ func GetColor(word string) (string, map[string]string) {
 }
 
 func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
-	log.Debug(fmt.Sprintf("%v: %v", utils.CallerName(0), curr))
+	utils.Log.Debugf("%v: %v\n", utils.CallerName(0), curr)
 	words := strings.Split(curr, "}")
 	var name_sep []string
 	var c_sep, c_name string
 	for _, word := range words {
-		log.Debug(fmt.Sprintf("Word: %v", word))
+		utils.Log.Debugf("Word: %v\n", word)
 		name_sep = strings.Split(word, "{")
 		if strings.Contains(name_sep[0], "...") {
 			c_sep, skip_by, skip_dir := SkipSeperators(name_sep[0])
@@ -217,10 +229,10 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
 				}
 				c_sep = name_sep[0]
 				c_name = "N/A"
-				log.Debug(fmt.Sprintf("Name: %v, Separator: %v", c_name, c_sep))
+				utils.Log.Debugf("Name: %v, Separator: %v\n", c_name, c_sep)
 				*format_data = append(*format_data, hsdata.FormatPosition{Separator: c_sep, Name: c_name})
 			} else {
-				log.Debug(fmt.Sprintf("Name: %v, Separator: %v", name_sep[0], name_sep[1]))
+				utils.Log.Debugf("Name: %v, Separator: %v\n", name_sep[0], name_sep[1])
 				if name_sep[0] != "" {
 					c_sep = name_sep[0]
 					c_name = name_sep[1]
@@ -233,7 +245,7 @@ func GetFormatPositons(curr string, format_data *[]hsdata.FormatPosition) {
 			}
 		}
 	}
-	log.Debug("GetFormatPos: Finished.")
+	utils.Log.Debugln("GetFormatPos: Finished.")
 }
 
 func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
@@ -242,7 +254,7 @@ func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
 	if data.UsePager {
 		formatted_lines, err := utils.LoopFile(data, utils.SaveLine, line)
 		if err != nil {
-			log.Panic(err)
+			utils.Log.Panicf("Running LoopFile failed: %v\n", err)
 		}
 		utils.ViewFileWithPager(formatted_lines, data, line, config)
 	} else if data.Output_file == "stdout" {
@@ -250,7 +262,7 @@ func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
 	} else {
 		f, err := os.Create(data.Output_file)
 		if err != nil {
-			log.Panic(err)
+			utils.Log.Panicf("Running LoopFile failed: %v\n", err)
 		}
 		// remember to close the file
 		defer f.Close()
@@ -259,7 +271,7 @@ func RunLoopFile(data *hsdata.HsData, config *utils.Config) {
 		_, err = utils.LoopFile(data, utils.WriteLine, line)
 	}
 	if err != nil {
-		log.Panic(err)
+		utils.Log.Panicf("Running LoopFile failed: %v\n", err)
 	}
 }
 
@@ -285,57 +297,80 @@ func SkipSeperators(separator string) (string, int, int) {
 func UseDefaults(data *hsdata.HsData, config *utils.Config) hsdata.FormattingData {
 	config_file, err := utils.GetDataPath("formats.json")
 	if err != nil {
-		fmt.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
+		utils.Log.Println("Please create the config directory ($XDG_CONFIG_HOME/histgrep/ or $HOME/.histgrep/)")
 		os.Exit(1)
 	}
-	log.Info(fmt.Sprintf("Using config file %v", config_file))
+	utils.Log.Infof("Using config file %v\n", config_file)
 	formatMap := hsdata.FormatMap{}
 	utils.FetchFormatting(config_file, &formatMap)
 	return formatMap.Get(config.Search.DefaultName) // This can fail and I should return an error instead.
 }
 
 func DoConfigFile(data *hsdata.HsData) *utils.Config {
+	utils.Log.Debugf("Starting config file processing\n")
+
 	var config *utils.Config
 	file, err := utils.GetDataPath("histgrep.toml")
 	if err != nil {
+		utils.Log.Debugf("No config file found, returning nil config: %v\n", err)
 		return config
 	}
+	utils.Log.Debugf("Found config file: %s\n", file)
+
 	config, err = utils.LoadConfig(file)
 	if err != nil {
+		utils.Log.Debugf("Failed to load config, returning nil: %v\n", err)
 		return config
 	}
+	utils.Log.Debugf("Config loaded successfully\n")
 
 	data.CaseSensitive = config.Search.CaseSensitive
 	data.UsePager = config.Display.PagerEnabled
 	data.NoColor = !config.Display.ColorEnabled
+	utils.Log.Tracef("Data updated - CaseSensitive: %t, UsePager: %t, NoColor: %t\n",
+		data.CaseSensitive, data.UsePager, data.NoColor)
 
+	utils.Log.Debugf("Current Input_file: %s\n", data.Input_file)
 	if data.Input_file == "stdin" {
+		utils.Log.Debugf("Processing stdin input\n")
 		stat, _ := os.Stdin.Stat()
+		utils.Log.Tracef("Stdin mode: %v, is char device: %t\n", stat.Mode(), (stat.Mode()&os.ModeCharDevice) != 0)
 		if (stat.Mode() & os.ModeCharDevice) != 0 {
+			utils.Log.Debugf("Stdin is terminal, getting default log files\n")
 			// Get matching log files
 			logFiles, err := utils.GetMatchingLogFiles(config)
 			if err != nil {
-				fmt.Printf("Error getting log files: %v\n", err)
+				utils.Log.Printf("Error getting log files: %v\n", err)
 				os.Exit(1)
 			}
+			utils.Log.Tracef("Found %d log files: %v\n", len(logFiles), logFiles)
 			data.Files = logFiles
 			data.Input_file = "default_files"
 		} else {
+			utils.Log.Debugf("Stdin is not terminal, checking if empty\n")
 			// Read a bit from stdin to check if it's empty
 			buf := make([]byte, 1)
 			_, err := os.Stdin.Read(buf)
 			if err == io.EOF {
+				utils.Log.Debugf("Stdin is empty, getting default log files\n")
 				// Get matching log files
 				logFiles, err := utils.GetMatchingLogFiles(config)
 				if err != nil {
-					fmt.Printf("Error getting log files: %v\n", err)
+					utils.Log.Printf("Error getting log files: %v\n", err)
 					os.Exit(1)
 				}
+				utils.Log.Tracef("Found %d log files: %v\n", len(logFiles), logFiles)
 				data.Files = logFiles
 				data.Input_file = "default_files"
+			} else {
+				utils.Log.Debugf("Stdin has data, will use stdin input\n")
 			}
 		}
+	} else {
+		utils.Log.Debugf("Not using stdin, Input_file: %s\n", data.Input_file)
 	}
+
+	utils.Log.Debugf("Final data.Input_file: %s, Files count: %d\n", data.Input_file, len(data.Files))
 	return config
 }
 

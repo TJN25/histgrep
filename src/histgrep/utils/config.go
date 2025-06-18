@@ -24,6 +24,8 @@ type Config struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
+	Log.Debugf("Loading configuration from: %s\n", path)
+
 	config := &Config{
 		DefaultLogs: struct {
 			Directory   string `toml:"directory"`
@@ -50,18 +52,26 @@ func LoadConfig(path string) (*Config, error) {
 		},
 	}
 
+	Log.Tracef("Config defaults: %+v\n", config)
+
 	if _, err := toml.DecodeFile(path, config); err != nil {
+		Log.Debugf("Failed to decode TOML file: %v\n", err)
 		return nil, err
 	}
 
+	Log.Debugf("Loaded config: %+v\n", config)
+
 	// Expand ~ to home directory if present
-	if config.DefaultLogs.Directory[:2] == "~/" {
+	if len(config.DefaultLogs.Directory) >= 2 && config.DefaultLogs.Directory[:2] == "~/" {
+		originalDir := config.DefaultLogs.Directory
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return nil, err
 		}
 		config.DefaultLogs.Directory = filepath.Join(home, config.DefaultLogs.Directory[2:])
+		Log.Debugf("Expanded directory: %s -> %s\n", originalDir, config.DefaultLogs.Directory)
 	}
+
 	return config, nil
 }
 
