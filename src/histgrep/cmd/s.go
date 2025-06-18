@@ -42,7 +42,18 @@ func sRun(cmd *cobra.Command, args []string) {
 	utils.SetVerbosity(verbosity)
 	config := sGetArgs(cmd, &data)
 	utils.Log.Infof("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData)
-	utils.Log.Debugf("Formatting input: %+v\n", data)
+	utils.Log.Tracef("Formatting input: %+v\n", data)
+	utils.Log.Debugf("HsData.Input_file: %s\n", data.Input_file)
+	utils.Log.Debugf("HsData.Files: %d files\n", len(data.Files))
+	utils.Log.Debugf("HsData.Output_file: %s\n", data.Output_file)
+	utils.Log.Debugf("HsData.Terms: %v\n", data.Terms)
+	utils.Log.Debugf("HsData.ExcludeTerms: %v\n", data.ExcludeTerms)
+	utils.Log.Debugf("HsData.FormatData: %+v\n", data.FormatData)
+	utils.Log.Debugf("HsData.Name: %s\n", data.Name)
+	utils.Log.Debugf("HsData.NoColor: %t\n", data.NoColor)
+	utils.Log.Debugf("HsData.UsePager: %t\n", data.UsePager)
+	utils.Log.Debugf("HsData.IncludeNumbers: %t\n", data.IncludeNumbers)
+	utils.Log.Debugf("HsData.CaseSensitive: %t\n", data.CaseSensitive)
 	DoFormatting(&data)
 	RunLoopFile(&data, config)
 	// SaveHistory(&data)
@@ -89,7 +100,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 		data.FormatData = formatMap[data.Name]
 		utils.Log.Tracef("%+v\n", formatMap)
 	}
-	utils.Log.Debugf("Args data: %+v\n", data)
+	utils.Log.Tracef("Args data: %+v\n", data)
 	return config
 }
 
@@ -296,47 +307,70 @@ func UseDefaults(data *hsdata.HsData, config *utils.Config) hsdata.FormattingDat
 }
 
 func DoConfigFile(data *hsdata.HsData) *utils.Config {
+	utils.Log.Debugf("Starting config file processing\n")
+
 	var config *utils.Config
 	file, err := utils.GetDataPath("histgrep.toml")
 	if err != nil {
+		utils.Log.Debugf("No config file found, returning nil config: %v\n", err)
 		return config
 	}
+	utils.Log.Debugf("Found config file: %s\n", file)
+
 	config, err = utils.LoadConfig(file)
 	if err != nil {
+		utils.Log.Debugf("Failed to load config, returning nil: %v\n", err)
 		return config
 	}
+	utils.Log.Debugf("Config loaded successfully\n")
 
 	data.CaseSensitive = config.Search.CaseSensitive
 	data.UsePager = config.Display.PagerEnabled
 	data.NoColor = !config.Display.ColorEnabled
+	utils.Log.Tracef("Data updated - CaseSensitive: %t, UsePager: %t, NoColor: %t\n",
+		data.CaseSensitive, data.UsePager, data.NoColor)
 
+	utils.Log.Debugf("Current Input_file: %s\n", data.Input_file)
 	if data.Input_file == "stdin" {
+		utils.Log.Debugf("Processing stdin input\n")
 		stat, _ := os.Stdin.Stat()
+		utils.Log.Tracef("Stdin mode: %v, is char device: %t\n", stat.Mode(), (stat.Mode()&os.ModeCharDevice) != 0)
 		if (stat.Mode() & os.ModeCharDevice) != 0 {
+			utils.Log.Debugf("Stdin is terminal, getting default log files\n")
 			// Get matching log files
 			logFiles, err := utils.GetMatchingLogFiles(config)
 			if err != nil {
 				utils.Log.Printf("Error getting log files: %v\n", err)
 				os.Exit(1)
 			}
+			utils.Log.Tracef("Found %d log files: %v\n", len(logFiles), logFiles)
 			data.Files = logFiles
 			data.Input_file = "default_files"
 		} else {
+			utils.Log.Debugf("Stdin is not terminal, checking if empty\n")
 			// Read a bit from stdin to check if it's empty
 			buf := make([]byte, 1)
 			_, err := os.Stdin.Read(buf)
 			if err == io.EOF {
+				utils.Log.Debugf("Stdin is empty, getting default log files\n")
 				// Get matching log files
 				logFiles, err := utils.GetMatchingLogFiles(config)
 				if err != nil {
 					utils.Log.Printf("Error getting log files: %v\n", err)
 					os.Exit(1)
 				}
+				utils.Log.Tracef("Found %d log files: %v\n", len(logFiles), logFiles)
 				data.Files = logFiles
 				data.Input_file = "default_files"
+			} else {
+				utils.Log.Debugf("Stdin has data, will use stdin input\n")
 			}
 		}
+	} else {
+		utils.Log.Debugf("Not using stdin, Input_file: %s\n", data.Input_file)
 	}
+
+	utils.Log.Debugf("Final data.Input_file: %s, Files count: %d\n", data.Input_file, len(data.Files))
 	return config
 }
 
