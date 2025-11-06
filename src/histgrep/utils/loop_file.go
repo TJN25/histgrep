@@ -12,9 +12,29 @@ import (
 	// log "github.com/sirupsen/logrus"
 )
 
+type searchTerm struct {
+	term        string
+	conditional string
+}
+
 func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) ([]string, error) {
 	Log.Tracef("%v: Loop file: %v\n", CallerName(0), hs_dat)
 	Log.Debugf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes)
+
+	hasConditionalTerms := false
+	searchTerms := make([]searchTerm, 0)
+
+	for _, term := range hs_dat.Terms {
+		if strings.HasPrefix(term, "^") {
+			hasConditionalTerms = true
+			searchTerms = append(searchTerms, searchTerm{term: strings.TrimPrefix(term, "^"), conditional: "StartsWith"})
+		} else if strings.HasSuffix(term, "$") {
+			hasConditionalTerms = true
+			searchTerms = append(searchTerms, searchTerm{term: strings.TrimSuffix(term, "$"), conditional: "EndsWith"})
+		} else {
+			searchTerms = append(searchTerms, searchTerm{term: term, conditional: "Contains"})
+		}
+	}
 	_, ok := hs_dat.Reader.(*BufferedInput)
 	if !ok {
 		var err error
