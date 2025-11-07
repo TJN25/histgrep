@@ -13,9 +13,9 @@ type HsLine struct {
 }
 
 type HsData struct {
-	Input_file     string
+	InputFile      string
 	Files          []string
-	Output_file    string
+	OutputFile     string
 	Terms          []string
 	ExcludeTerms   []string
 	FormatData     FormattingData

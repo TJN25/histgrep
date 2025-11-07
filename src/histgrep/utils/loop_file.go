@@ -12,13 +12,33 @@ import (
 	// log "github.com/sirupsen/logrus"
 )
 
-func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdata.HsLine) ([]string, error) {
-	Log.Tracef("%v: Loop file: %v\n", CallerName(0), hs_dat)
-	Log.Debugf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hs_dat.FormatData.Input, hs_dat.FormatData.Output, hs_dat.FormatData.Color, hs_dat.FormatData.Excludes)
-	_, ok := hs_dat.Reader.(*BufferedInput)
+type searchTerm struct {
+	term        string
+	conditional string
+}
+
+func LoopFile(hsDat *hsdata.HsData, write_fn hsdata.WriteFn, currentLine hsdata.HsLine) ([]string, error) {
+	Log.Tracef("%v: Loop file: %v\n", CallerName(0), hsDat)
+	Log.Debugf("Input: %v, Output: %v, Color: %v, Excludes: %v\n", hsDat.FormatData.Input, hsDat.FormatData.Output, hsDat.FormatData.Color, hsDat.FormatData.Excludes)
+
+	hasConditionalTerms := false
+	searchTerms := make([]searchTerm, 0)
+
+	for _, term := range hsDat.Terms {
+		if strings.HasPrefix(term, "^") {
+			hasConditionalTerms = true
+			searchTerms = append(searchTerms, searchTerm{term: strings.TrimPrefix(term, "^"), conditional: "StartsWith"})
+		} else if strings.HasSuffix(term, "$") {
+			hasConditionalTerms = true
+			searchTerms = append(searchTerms, searchTerm{term: strings.TrimSuffix(term, "$"), conditional: "EndsWith"})
+		} else {
+			searchTerms = append(searchTerms, searchTerm{term: term, conditional: "Contains"})
+		}
+	}
+	_, ok := hsDat.Reader.(*BufferedInput)
 	if !ok {
 		var err error
-		hs_dat.Reader, err = GetScanner(hs_dat)
+		hsDat.Reader, err = GetScanner(hsDat)
 		if err != nil {
 			var formatted_lines []string
 			Log.Fprintf(os.Stderr, "Scanner error: %v\n", err)
@@ -27,12 +47,12 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 	}
 
 	lines_remaining := true
-	match_found := false
-	line_count := 0
+	matchFound := false
+	lineCount := 0
 	for lines_remaining {
 		var line string
 		var err error
-		switch r := hs_dat.Reader.(type) {
+		switch r := hsDat.Reader.(type) {
 		case *bufio.Reader:
 			line, err = r.ReadString('\n')
 			line, _ = strings.CutSuffix(line, "\n")
@@ -47,79 +67,109 @@ func LoopFile(hs_dat *hsdata.HsData, write_fn hsdata.WriteFn, current_line hsdat
 			continue
 		}
 		do_write := true
-		if len(hs_dat.ExcludeTerms) > 0 {
-			for _, term := range hs_dat.ExcludeTerms {
-				var search_line string
-				var search_term string
-				if !hs_dat.CaseSensitive {
-					search_line = strings.ToLower(line)
-					search_term = strings.ToLower(term)
+		if len(hsDat.ExcludeTerms) > 0 {
+			for _, term := range hsDat.ExcludeTerms {
+				var searchLine string
+				var searchTerm string
+				if !hsDat.CaseSensitive {
+					searchLine = strings.ToLower(line)
+					searchTerm = strings.ToLower(term)
 				} else {
-					search_line = line
-					search_term = term
+					searchLine = line
+					searchTerm = term
 				}
 
-				if strings.Contains(search_line, search_term) {
+				if strings.Contains(searchLine, searchTerm) {
 					do_write = false
 					break
 				}
 			}
 		}
-		if len(hs_dat.Terms) > 0 {
+
+		currentLine.Line = line
+
+		if len(searchTerms) > 0 {
 			if strings.Contains(line, "histgrep") {
 				continue
 			}
-			for _, term := range hs_dat.Terms {
-				var search_line string
-				var search_term string
-				if !hs_dat.CaseSensitive {
-					search_line = strings.ToLower(line)
-					search_term = strings.ToLower(term)
-				} else {
-					search_line = line
-					search_term = term
+
+			// First pass: Basic contains check for all terms.
+			for _, term := range searchTerms {
+				searchLine := line
+				searchTerm := term.term
+				if !hsDat.CaseSensitive {
+					searchLine = strings.ToLower(line)
+					searchTerm = strings.ToLower(term.term)
 				}
 
-				if strings.Contains(search_line, search_term) {
-					current_line.Line = line
-				} else {
+				if !strings.Contains(searchLine, searchTerm) {
 					do_write = false
 					break
 				}
 			}
-		} else {
-			current_line.Line = line
+
+			// Second pass: Conditional checks for startsWith/endsWith for matching lines
+			if do_write && hasConditionalTerms {
+				wordsMap := getInputNames(line, &hsDat.FormatData)
+
+				for _, term := range searchTerms {
+					if term.conditional == "StartsWith" || term.conditional == "EndsWith" {
+						conditionalMatchFound := false
+						for _, currentSegment := range wordsMap {
+							searchSegment := currentSegment
+							searchTerm := term.term
+							if !hsDat.CaseSensitive {
+								searchSegment = strings.ToLower(currentSegment)
+								searchTerm = strings.ToLower(term.term)
+							}
+
+							if term.conditional == "StartsWith" && strings.HasPrefix(searchSegment, searchTerm) {
+								conditionalMatchFound = true
+								break
+							}
+							if term.conditional == "EndsWith" && strings.HasSuffix(searchSegment, searchTerm) {
+								conditionalMatchFound = true
+								break
+							}
+						}
+						if !conditionalMatchFound {
+							do_write = false
+							break
+						}
+					}
+				}
+			}
 		}
 		if do_write {
-			line_count++
-			match_found = true
-			if (hs_dat.FormatData.Output["keys"])[0] != "BLANK" {
-				words_map := getInputNames(current_line.Line, &hs_dat.FormatData)
-				Log.Tracef("%+v\n", words_map)
-				current_line.Line = FormatLine(&words_map, &hs_dat.FormatData, hs_dat.NoColor)
-				if hs_dat.IncludeNumbers {
-					number_str := strconv.Itoa(line_count)
-					padding := 4 - len(number_str)
+			lineCount++
+			matchFound = true
+			if (hsDat.FormatData.Output["keys"])[0] != "BLANK" {
+				wordsMap := getInputNames(currentLine.Line, &hsDat.FormatData)
+				Log.Tracef("%+v\n", wordsMap)
+				currentLine.Line = FormatLine(&wordsMap, &hsDat.FormatData, hsDat.NoColor)
+				if hsDat.IncludeNumbers {
+					numberStr := strconv.Itoa(lineCount)
+					padding := 4 - len(numberStr)
 					if padding > 0 {
-						number_str = strings.Repeat(" ", padding) + number_str
+						numberStr = strings.Repeat(" ", padding) + numberStr
 					}
-					current_line.Line = number_str + "| " + current_line.Line
+					currentLine.Line = numberStr + "| " + currentLine.Line
 				}
-				Log.Debugf("%s\n", current_line)
+				Log.Debugf("%s\n", currentLine)
 			}
-			if current_line.Line != "" {
-				write_fn(&current_line)
+			if currentLine.Line != "" {
+				write_fn(&currentLine)
 			}
 		}
 	}
-	if !match_found {
+	if !matchFound {
 		return []string{"No matches found for the given terms"}, nil
 	}
-	return current_line.OutLines, nil
+	return currentLine.OutLines, nil
 }
 
-func GetScanner(hs_dat *hsdata.HsData) (interface{}, error) {
-	if hs_dat.Input_file == "stdin" {
+func GetScanner(hsDat *hsdata.HsData) (interface{}, error) {
+	if hsDat.InputFile == "stdin" {
 		var lines []string
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
@@ -130,13 +180,13 @@ func GetScanner(hs_dat *hsdata.HsData) (interface{}, error) {
 		}
 		if len(lines) == 0 {
 			// If stdin is empty, use default files
-			return getBufferedInputFromFiles(hs_dat.Files)
+			return getBufferedInputFromFiles(hsDat.Files)
 		}
 		return &BufferedInput{content: lines}, nil
-	} else if hs_dat.Input_file == "default_files" {
-		return getBufferedInputFromFiles(hs_dat.Files)
+	} else if hsDat.InputFile == "default_files" {
+		return getBufferedInputFromFiles(hsDat.Files)
 	} else {
-		file, err := os.Open(hs_dat.Input_file)
+		file, err := os.Open(hsDat.InputFile)
 		if err != nil {
 			return nil, err
 		}
