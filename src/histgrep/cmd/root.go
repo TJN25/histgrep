@@ -59,16 +59,16 @@ func rootRun(cmd *cobra.Command, args []string) {
 	verbosity, _ := cmd.PersistentFlags().GetCount("verbose")
 	utils.SetVerbosity(verbosity)
 	config := rootGetArgs(&data)
-	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.Input_file, data.Output_file, data.Terms, data.FormatData))
+	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.InputFile, data.OutputFile, data.Terms, data.FormatData))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
 	DoFormatting(&data)
 	RunLoopFile(&data, config)
 }
 
 func rootGetArgs(data *hsdata.HsData) *utils.Config {
-	data.Input_file = "stdin"
+	data.InputFile = "stdin"
 	config := DoConfigFile(data)
-	data.Output_file = "stdout"
+	data.OutputFile = "stdout"
 	data.IncludeNumbers = false
 	data.ExcludeTerms = []string{}
 	data.UsePager = true
