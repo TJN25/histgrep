@@ -85,7 +85,8 @@ func LoopFile(hsDat *hsdata.HsData, write_fn hsdata.WriteFn, currentLine hsdata.
 				}
 			}
 		}
-		currentLine.Line = line // The full line is assigned here. `do_write` will control if it's used for output.
+
+		currentLine.Line = line
 
 		if len(searchTerms) > 0 {
 			if strings.Contains(line, "histgrep") {
@@ -138,8 +139,6 @@ func LoopFile(hsDat *hsdata.HsData, write_fn hsdata.WriteFn, currentLine hsdata.
 					}
 				}
 			}
-		} else {
-			currentLine.Line = line
 		}
 		if do_write {
 			lineCount++
