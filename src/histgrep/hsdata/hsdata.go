@@ -24,6 +24,7 @@ type HsData struct {
 	UsePager       bool
 	IncludeNumbers bool
 	CaseSensitive  bool
+	KeepDuplicates bool
 	Reader         interface{}
 }
 
