@@ -49,6 +49,7 @@ func LoopFile(hsDat *hsdata.HsData, write_fn hsdata.WriteFn, currentLine hsdata.
 	lines_remaining := true
 	matchFound := false
 	lineCount := 0
+	var previousLine string
 	for lines_remaining {
 		var line string
 		var err error
@@ -141,22 +142,36 @@ func LoopFile(hsDat *hsdata.HsData, write_fn hsdata.WriteFn, currentLine hsdata.
 			}
 		}
 		if do_write {
-			lineCount++
-			matchFound = true
+			var formattedLine string
 			if (hsDat.FormatData.Output["keys"])[0] != "BLANK" {
 				wordsMap := getInputNames(currentLine.Line, &hsDat.FormatData)
 				Log.Tracef("%+v\n", wordsMap)
-				currentLine.Line = FormatLine(&wordsMap, &hsDat.FormatData, hsDat.NoColor)
-				if hsDat.IncludeNumbers {
-					numberStr := strconv.Itoa(lineCount)
-					padding := 4 - len(numberStr)
-					if padding > 0 {
-						numberStr = strings.Repeat(" ", padding) + numberStr
-					}
-					currentLine.Line = numberStr + "| " + currentLine.Line
-				}
-				Log.Debugf("%s\n", currentLine)
+				formattedLine = FormatLine(&wordsMap, &hsDat.FormatData, hsDat.NoColor)
+			} else {
+				formattedLine = currentLine.Line
 			}
+
+			if !hsDat.KeepDuplicates {
+				if formattedLine == previousLine {
+					continue
+				}
+				previousLine = formattedLine
+			}
+
+			lineCount++
+			matchFound = true
+
+			if hsDat.IncludeNumbers {
+				numberStr := strconv.Itoa(lineCount)
+				padding := 4 - len(numberStr)
+				if padding > 0 {
+					numberStr = strings.Repeat(" ", padding) + numberStr
+				}
+				formattedLine = numberStr + "| " + formattedLine
+			}
+			currentLine.Line = formattedLine
+			Log.Debugf("%s\n", currentLine)
+
 			if currentLine.Line != "" {
 				write_fn(&currentLine)
 			}

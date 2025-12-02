@@ -32,6 +32,7 @@ func init() {
 	sCmd.Flags().BoolP("no-color", "f", false, "Do not include colors in output")
 	sCmd.Flags().BoolP("pager", "p", false, "Display output in pager (Bubble Tea)")
 	sCmd.Flags().BoolP("numbered", "", false, "Include line numbers in output")
+	sCmd.Flags().BoolP("keep-duplicates", "d", false, "Keep duplicate consecutive lines")
 	sCmd.Flags().StringP("exclude", "x", "SKIPEXCLUDE", "Exclude specific terms from output")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
@@ -54,6 +55,7 @@ func sRun(cmd *cobra.Command, args []string) {
 	utils.Log.Debugf("HsData.UsePager: %t\n", data.UsePager)
 	utils.Log.Debugf("HsData.IncludeNumbers: %t\n", data.IncludeNumbers)
 	utils.Log.Debugf("HsData.CaseSensitive: %t\n", data.CaseSensitive)
+	utils.Log.Debugf("HsData.KeepDuplicates: %t\n", data.KeepDuplicates)
 	DoFormatting(&data)
 	RunLoopFile(&data, config)
 	// SaveHistory(&data)
@@ -74,6 +76,7 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 		data.CaseSensitive, _ = cmd.Flags().GetBool("case-sensitive")
 	}
 	data.IncludeNumbers, _ = cmd.Flags().GetBool("numbered")
+	data.KeepDuplicates, _ = cmd.Flags().GetBool("keep-duplicates")
 	exclude, _ := cmd.Flags().GetString("exclude")
 	if exclude == "SKIPEXCLUDE" {
 		data.ExcludeTerms = []string{}
