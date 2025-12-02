@@ -13,8 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const VERSION = "0.4.0"
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "histgrep",
@@ -47,7 +45,7 @@ func init() {
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		versionFlag, _ := cmd.Flags().GetBool("version")
 		if versionFlag {
-			fmt.Printf("HistGrep version %s\n", VERSION)
+			fmt.Printf("HistGrep version %s\n", AppVersion)
 			os.Exit(0)
 		}
 	}
