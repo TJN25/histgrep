@@ -56,9 +56,7 @@ func sRun(cmd *cobra.Command, args []string) {
 	utils.Log.Debugf("HsData.IncludeNumbers: %t\n", data.IncludeNumbers)
 	utils.Log.Debugf("HsData.CaseSensitive: %t\n", data.CaseSensitive)
 	utils.Log.Debugf("HsData.KeepDuplicates: %t\n", data.KeepDuplicates)
-	DoFormatting(&data)
 	RunLoopFile(&data, config)
-	// SaveHistory(&data)
 }
 
 func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
@@ -114,33 +112,33 @@ Update the other functions to use this format.
 add a feature that allows each search term to have a set of exclude terms.
 */
 
-func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
-	format_data := hsdata.FormattingData{}
-	return format_data
-}
-
-func GetFormat(curr string, names *[]string, separators *[]string, positions *[]hsdata.FormatPosition) {
-	utils.Log.Tracef("%v: %v\n", utils.CallerName(0), curr)
-	words := strings.Split(curr, "}")
-	var name_sep []string
-	for _, word := range words {
-		pos := hsdata.FormatPosition{}
-		utils.Log.Debugf("Word: %v\n", word)
-		name_sep = strings.Split(word, "{")
-		if strings.Contains(name_sep[0], "...") {
-			MultiplePositions(&name_sep)
-		}
-		curr_name, separator := NameAndSeparator(name_sep, &pos)
-		if separator != "" {
-			*separators = append(*separators, separator)
-		}
-		if curr_name != "" {
-			*names = append(*names, curr_name)
-		}
-		*positions = append(*positions, pos)
-	}
-	utils.Log.Debugln("GetFormat: Finished.")
-}
+// func DoFormatting(data *hsdata.HsData) hsdata.FormattingData {
+// 	format_data := hsdata.FormattingData{}
+// 	return format_data
+// }
+//
+// func GetFormat(curr string, names *[]string, separators *[]string, positions *[]hsdata.FormatPosition) {
+// 	utils.Log.Tracef("%v: %v\n", utils.CallerName(0), curr)
+// 	words := strings.Split(curr, "}")
+// 	var name_sep []string
+// 	for _, word := range words {
+// 		pos := hsdata.FormatPosition{}
+// 		utils.Log.Debugf("Word: %v\n", word)
+// 		name_sep = strings.Split(word, "{")
+// 		if strings.Contains(name_sep[0], "...") {
+// 			MultiplePositions(&name_sep)
+// 		}
+// 		curr_name, separator := NameAndSeparator(name_sep, &pos)
+// 		if separator != "" {
+// 			*separators = append(*separators, separator)
+// 		}
+// 		if curr_name != "" {
+// 			*names = append(*names, curr_name)
+// 		}
+// 		*positions = append(*positions, pos)
+// 	}
+// 	utils.Log.Debugln("GetFormat: Finished.")
+// }
 
 func MultiplePositions(name_sep *[]string) {
 	current_separator, skip_by, skip_dir := SkipSeperators((*name_sep)[0])

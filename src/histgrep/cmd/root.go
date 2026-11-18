@@ -59,7 +59,6 @@ func rootRun(cmd *cobra.Command, args []string) {
 	config := rootGetArgs(&data)
 	log.Info(fmt.Sprintf("\n    Running search with: \n    files: %v -> %v\n    Terms: %v\n    Format: %v\n", data.InputFile, data.OutputFile, data.Terms, data.FormatData))
 	log.Debug(fmt.Sprintf("Formatting input: %v", data))
-	DoFormatting(&data)
 	RunLoopFile(&data, config)
 }
 
