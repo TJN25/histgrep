@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/TJN25/histgrep/hsdata"
 	// log "github.com/sirupsen/logrus"
@@ -254,7 +255,7 @@ func FormatLine(terms *MapFormat, format_data *hsdata.FormattingData, no_color b
 			starts_with, ok := excludes["starts_with"]
 			if ok {
 				for _, exclude := range starts_with {
-					if strings.HasPrefix((*terms)[term], exclude) {
+					if startsWithWord((*terms)[term], exclude) {
 						return ""
 					}
 				}
@@ -399,4 +400,15 @@ func (bi *BufferedInput) ReadLine() (string, error) {
 
 func (bi *BufferedInput) Reset() {
 	bi.index = 0
+}
+
+// startsWithWord reports whether s begins with word as a whole word, i.e. the
+// prefix is followed by the end of s or by whitespace. This keeps an exclude of
+// "ls" from also dropping "lsof".
+func startsWithWord(s, word string) bool {
+	if !strings.HasPrefix(s, word) {
+		return false
+	}
+	rest := s[len(word):]
+	return rest == "" || unicode.IsSpace(rune(rest[0]))
 }

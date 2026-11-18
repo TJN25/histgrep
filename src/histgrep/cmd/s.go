@@ -34,6 +34,7 @@ func init() {
 	sCmd.Flags().BoolP("numbered", "", false, "Include line numbers in output")
 	sCmd.Flags().BoolP("keep-duplicates", "d", false, "Keep duplicate consecutive lines")
 	sCmd.Flags().StringP("exclude", "x", "SKIPEXCLUDE", "Exclude specific terms from output")
+	sCmd.Flags().BoolP("no-excludes", "", false, "Ignore the format's built-in excludes (e.g. ls, cd) and show all lines")
 	sCmd.PersistentFlags().CountP("verbose", "v", "Level of verbosity (0-5) default (0)")
 }
 
@@ -100,6 +101,9 @@ func sGetArgs(cmd *cobra.Command, data *hsdata.HsData) *utils.Config {
 		}
 		data.FormatData = formatMap[data.Name]
 		utils.Log.Tracef("%+v\n", formatMap)
+	}
+	if noExcludes, _ := cmd.Flags().GetBool("no-excludes"); noExcludes {
+		data.FormatData.Excludes = nil
 	}
 	utils.Log.Tracef("Args data: %+v\n", data)
 	return config
